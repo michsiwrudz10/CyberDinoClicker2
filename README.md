@@ -111,6 +111,47 @@ Jesli chcesz, zeby wersja z GitHub Pages dzialala online:
 
 Przyklad zmiennych masz w `.env.example`.
 
+## Render backend
+
+Repo jest teraz przygotowane pod prosty deploy backendu na Render.
+
+### Co kliknac
+
+1. Wejdz na Render i wybierz:
+   - `New +`
+   - `Blueprint`
+2. Wskaz to repo GitHub.
+3. Render wykryje plik:
+   - `render.yaml`
+4. Ustaw brakujace sekrety:
+   - `DATABASE_URL` = connection string z Neon
+   - `TELEGRAM_BOT_TOKEN`
+   - `ADMIN_TELEGRAM_IDS`
+   - opcjonalnie `TELEGRAM_WEBHOOK_SECRET`
+   - opcjonalnie `TELEGRAM_PAYMENT_PROVIDER_TOKEN`
+5. Wdroz backend.
+
+### Co dostaniesz
+
+Po deployu backend powinien odpowiadac pod:
+
+- `/api/health`
+
+Przyklad:
+
+`https://twoj-backend.onrender.com/api/health`
+
+### Co potem z frontendem
+
+Jak juz masz publiczny URL backendu, zbuduj frontend z:
+
+```powershell
+$env:VITE_API_BASE_URL='https://twoj-backend.onrender.com'
+npm.cmd run deploy
+```
+
+Wtedy GitHub Pages zacznie wolac prawdziwe API zamiast pustego hosta.
+
 ## Neon / PostgreSQL prep
 
 Jesli chcesz juz przygotowac baze w Neon:

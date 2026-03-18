@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: cyberdinoclicker-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: ALLOWED_ORIGIN
+        value: https://michsiwrudz10.github.io
+      - key: STORAGE_DRIVER
+        value: postgres
+      - key: DATABASE_URL
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: ADMIN_TELEGRAM_IDS
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
+      - key: TELEGRAM_PAYMENT_PROVIDER_TOKEN
+        sync: false
+      - key: ALLOW_DEV_AUTH
+        value: "0"
+      - key: ALLOW_DEV_PAYMENTS
+        value: "0"
