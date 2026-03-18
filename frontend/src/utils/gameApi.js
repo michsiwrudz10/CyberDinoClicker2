@@ -4,16 +4,38 @@ function buildApiUrl(path) {
   return `${API_BASE_URL}${path}`;
 }
 
+function isGitHubPagesRuntime() {
+  try {
+    return typeof window !== "undefined" && /\.github\.io$/i.test(window.location.hostname || "");
+  } catch {
+    return false;
+  }
+}
+
+function createNetworkError(originalError) {
+  const error = new Error("Network request failed.");
+  error.cause = originalError;
+  error.code = isGitHubPagesRuntime() && !API_BASE_URL
+    ? "PAGES_BACKEND_MISSING"
+    : "NETWORK_UNAVAILABLE";
+  return error;
+}
+
 async function request(path, options = {}) {
   const headers = {
     ...(options.body ? { "Content-Type": "application/json" } : {}),
     ...(options.headers || {})
   };
 
-  const response = await fetch(buildApiUrl(path), {
-    ...options,
-    headers
-  });
+  let response;
+  try {
+    response = await fetch(buildApiUrl(path), {
+      ...options,
+      headers
+    });
+  } catch (error) {
+    throw createNetworkError(error);
+  }
 
   let payload = null;
   try {

@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { createGameStateStore } from "./storage/index.mjs";
 
 const API_PORT = Number(process.env.API_PORT || 8787);
+const API_HOST = process.env.API_HOST || "127.0.0.1";
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const SESSION_SECRET = process.env.SESSION_SECRET || TELEGRAM_BOT_TOKEN || "dev-session-secret";
@@ -643,8 +644,8 @@ const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process
 
 if (isDirectRun) {
   const server = createAppServer();
-  server.listen(API_PORT, "127.0.0.1", () => {
-    console.log(`Dino API listening on http://127.0.0.1:${API_PORT}`);
+  server.listen(API_PORT, API_HOST, () => {
+    console.log(`Dino API listening on http://${API_HOST}:${API_PORT}`);
   });
 }
 

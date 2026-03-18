@@ -1022,6 +1022,12 @@ const TRANSLATIONS = {
 const TRANSLATION_OVERRIDES = {
   "pl": {
     "language.label": "J\u0119zyk",
+    "loading.connectionLost": "Utracono po\u0142\u0105czenie",
+    "loading.retry": "Po\u0142\u0105cz ponownie",
+    "error.failedConnect": "Nie uda\u0142o si\u0119 po\u0142\u0105czy\u0107 z serwerem gry.",
+    "error.gameLocked": "Gra jest zablokowana, dop\u00f3ki serwer znowu si\u0119 nie po\u0142\u0105czy.",
+    "error.lostConnection": "Utracono po\u0142\u0105czenie z serwerem gry.",
+    "error.pagesBackendMissing": "Ta wersja z GitHub Pages zawiera tylko frontend. Pod\u0142\u0105cz j\u0105 do wdro\u017conego backendu API z prawdziw\u0105 baz\u0105 danych.",
     "quests.subtitle": "Wykonuj zadania gameplayowe i spo\u0142eczno\u015bciowe, \u017ceby rozwija\u0107 swoje dino imperium.",
     "quests.active": "Aktywne zadania",
     "quests.noQuests": "Brak zada\u0144 - graj dalej, aby odblokowa\u0107 kolejne.",
@@ -1048,6 +1054,12 @@ const TRANSLATION_OVERRIDES = {
   },
   "de": {
     "language.label": "Sprache",
+    "loading.connectionLost": "Verbindung zum Server verloren",
+    "loading.retry": "Erneut verbinden",
+    "error.failedConnect": "Verbindung zum Spielserver fehlgeschlagen.",
+    "error.gameLocked": "Das Spiel bleibt gesperrt, bis der Server wieder erreichbar ist.",
+    "error.lostConnection": "Verbindung zum Spielserver verloren.",
+    "error.pagesBackendMissing": "Diese GitHub-Pages-Version enthaelt nur das Frontend. Verbinde sie mit einem bereitgestellten Backend-API und einer echten Datenbank.",
     "language.name.en": "Englisch",
     "language.name.pl": "Polnisch",
     "language.name.de": "Deutsch",

@@ -124,6 +124,26 @@ function shouldLockForError(error) {
   return !status || status >= 500 || status === 401 || status === 403;
 }
 
+function getReadableErrorMessage(error, t, fallbackKey = "error.actionFailed") {
+  if (error?.code === "PAGES_BACKEND_MISSING") {
+    return t(
+      "error.pagesBackendMissing",
+      {},
+      "This GitHub Pages version only has the frontend. Connect it to a deployed backend API with a real database."
+    );
+  }
+
+  if (error?.code === "NETWORK_UNAVAILABLE") {
+    return t("error.failedConnect", {}, "Failed to connect to the game server.");
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return t(fallbackKey, {}, "Action failed.");
+}
+
 function triggerFeedback(pattern = 24) {
   try {
     if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
@@ -357,7 +377,7 @@ export default function App() {
     } catch (error) {
       setStatus("blocked");
       setBootTarget(100);
-      setBanner(error instanceof Error ? error.message : t("error.failedConnect", {}, "Failed to connect to the game server."));
+      setBanner(getReadableErrorMessage(error, t, "error.failedConnect"));
     }
   };
 
@@ -413,7 +433,7 @@ export default function App() {
     const intervalId = setInterval(() => {
       void refreshPlayer().catch((error) => {
         setStatus("blocked");
-        setBanner(error instanceof Error ? error.message : t("error.lostConnection", {}, "Lost connection to the server."));
+        setBanner(getReadableErrorMessage(error, t, "error.lostConnection"));
       });
     }, REFRESH_INTERVAL_MS);
 
