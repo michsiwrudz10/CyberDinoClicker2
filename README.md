@@ -42,8 +42,11 @@ npm run build
 - `dist/`, `node_modules/` i lokalne pliki bazy nie sa przeznaczone do commitowania.
 - GitHub Pages moze wystawic tylko frontend statyczny.
 - Backend i baza danych musza byc hostowane osobno, jesli gra ma dzialac online z zapisem serwerowym.
-- Obecny runtime serwera obsluguje produkcyjnie baze `SQLite` jako plik na trwalym dysku serwera.
-- Repo ma teraz gotowy schemat i skrypty przygotowawcze pod `PostgreSQL / Neon`, ale sam runtime API nie jest jeszcze calkowicie przepiety na `Postgres`.
+- Runtime serwera obsluguje teraz dwa tryby storage:
+  - `SQLite` przez `GAME_DB_FILE`
+  - `PostgreSQL / Neon` przez `DATABASE_URL`
+- Gdy ustawisz `DATABASE_URL=postgresql://...`, backend automatycznie przechodzi na `postgres`.
+- Implementacja `postgres` uzywa obecnej logiki gry i synchronizuje stan do Postgresa jako zrodla prawdy. Dziala, ale jest ciezsza od docelowego natywnego store Postgres.
 
 ## GitHub
 
@@ -157,3 +160,5 @@ npm run db:migrate:sqlite-to-postgres
 ```
 
 Ten krok kopiuje dane z lokalnego `dino.sqlite` do tabel w Postgresie.
+
+5. Po ustawieniu `DATABASE_URL` backend gry zacznie uzywac Postgresa jako aktywnego silnika storage.
