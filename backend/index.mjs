@@ -122,11 +122,11 @@ function getBearerToken(req) {
   return raw.slice(7).trim();
 }
 
-function getRequiredSession(req, store) {
+async function getRequiredSession(req, store) {
   const token = getBearerToken(req);
   const session = verifySessionToken(token);
 
-  if (!store.getPlayerRow(session.sub)) {
+  if (!await store.getPlayerRow(session.sub)) {
     throw new HttpError(401, "Session user no longer exists.");
   }
 
@@ -302,9 +302,9 @@ function createRouter({ store, driver }) {
       if (req.method === "POST" && url.pathname === "/api/telegram/auth") {
         const body = await readJsonBody(req);
         const telegramUser = getAuthenticatedTelegramUser(body);
-        const player = store.ensurePlayer(telegramUser, body?.referralCode || "");
+        const player = await store.ensurePlayer(telegramUser, body?.referralCode || "");
         const token = createSessionToken(telegramUser.id);
-        const isAdmin = store.isAdminUser(telegramUser.id);
+        const isAdmin = await store.isAdminUser(telegramUser.id);
 
         sendJson(req, res, 200, {
           ok: true,
@@ -323,159 +323,159 @@ function createRouter({ store, driver }) {
       }
 
       if (req.method === "GET" && url.pathname === "/api/player/me") {
-        const session = getRequiredSession(req, store);
-        const player = store.getPlayerSnapshot(session.sub);
+        const session = await getRequiredSession(req, store);
+        const player = await store.getPlayerSnapshot(session.sub);
         sendJson(req, res, 200, {
           ok: true,
-          isAdmin: store.isAdminUser(session.sub),
+          isAdmin: await store.isAdminUser(session.sub),
           player
         });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/player/language") {
-        const session = getRequiredSession(req, store);
+        const session = await getRequiredSession(req, store);
         const body = await readJsonBody(req);
-        const player = store.setPlayerLanguage(session.sub, body?.languageCode);
+        const player = await store.setPlayerLanguage(session.sub, body?.languageCode);
         sendJson(req, res, 200, { ok: true, player });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/game/tap") {
-        const session = getRequiredSession(req, store);
+        const session = await getRequiredSession(req, store);
         const body = await readJsonBody(req);
-        const player = store.tap(session.sub, body?.count || 1);
+        const player = await store.tap(session.sub, body?.count || 1);
         sendJson(req, res, 200, { ok: true, player });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/game/upgrade-click") {
-        const session = getRequiredSession(req, store);
-        const player = store.upgradeClick(session.sub);
+        const session = await getRequiredSession(req, store);
+        const player = await store.upgradeClick(session.sub);
         sendJson(req, res, 200, { ok: true, player });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/game/purchase") {
-        const session = getRequiredSession(req, store);
+        const session = await getRequiredSession(req, store);
         const body = await readJsonBody(req);
-        const result = store.purchaseDino(session.sub, body?.dinoId, body?.sex);
+        const result = await store.purchaseDino(session.sub, body?.dinoId, body?.sex);
         sendJson(req, res, 200, { ok: true, ...result });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/zoo/ticket-price") {
-        const session = getRequiredSession(req, store);
+        const session = await getRequiredSession(req, store);
         const body = await readJsonBody(req);
-        const player = store.setTicketPrice(session.sub, body?.ticketPrice);
+        const player = await store.setTicketPrice(session.sub, body?.ticketPrice);
         sendJson(req, res, 200, { ok: true, player });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/zoo/buy-laboratory") {
-        const session = getRequiredSession(req, store);
-        const player = store.buyLaboratory(session.sub);
+        const session = await getRequiredSession(req, store);
+        const player = await store.buyLaboratory(session.sub);
         sendJson(req, res, 200, { ok: true, player });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/zoo/unlock-hatchery") {
-        const session = getRequiredSession(req, store);
-        const player = store.unlockHatchery(session.sub);
+        const session = await getRequiredSession(req, store);
+        const player = await store.unlockHatchery(session.sub);
         sendJson(req, res, 200, { ok: true, player });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/zoo/create-egg") {
-        const session = getRequiredSession(req, store);
+        const session = await getRequiredSession(req, store);
         const body = await readJsonBody(req);
-        const player = store.createLabEgg(session.sub, body?.dinoId, body?.sex);
+        const player = await store.createLabEgg(session.sub, body?.dinoId, body?.sex);
         sendJson(req, res, 200, { ok: true, player });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/zoo/buy-gene") {
-        const session = getRequiredSession(req, store);
+        const session = await getRequiredSession(req, store);
         const body = await readJsonBody(req);
-        const player = store.buyGene(session.sub, body?.projectId, body?.geneId);
+        const player = await store.buyGene(session.sub, body?.projectId, body?.geneId);
         sendJson(req, res, 200, { ok: true, player });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/zoo/buy-genotype") {
-        const session = getRequiredSession(req, store);
+        const session = await getRequiredSession(req, store);
         const body = await readJsonBody(req);
-        const player = store.buyGenotype(session.sub, body?.projectId, body?.genotypeId);
+        const player = await store.buyGenotype(session.sub, body?.projectId, body?.genotypeId);
         sendJson(req, res, 200, { ok: true, player });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/zoo/hatch-egg") {
-        const session = getRequiredSession(req, store);
+        const session = await getRequiredSession(req, store);
         const body = await readJsonBody(req);
-        const player = store.hatchProject(session.sub, body?.projectId);
+        const player = await store.hatchProject(session.sub, body?.projectId);
         sendJson(req, res, 200, { ok: true, player });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/zoo/breed") {
-        const session = getRequiredSession(req, store);
+        const session = await getRequiredSession(req, store);
         const body = await readJsonBody(req);
-        const player = store.breedDinosaurs(session.sub, body?.motherSpeciesId, body?.fatherSpeciesId);
+        const player = await store.breedDinosaurs(session.sub, body?.motherSpeciesId, body?.fatherSpeciesId);
         sendJson(req, res, 200, { ok: true, player });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/market/create-order") {
-        const session = getRequiredSession(req, store);
+        const session = await getRequiredSession(req, store);
         const body = await readJsonBody(req);
-        const result = store.createExchangeOrder(session.sub, body?.routeId, body?.resourceType, body?.amount);
+        const result = await store.createExchangeOrder(session.sub, body?.routeId, body?.resourceType, body?.amount);
         sendJson(req, res, 200, { ok: true, ...result });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/market/claim-order") {
-        const session = getRequiredSession(req, store);
+        const session = await getRequiredSession(req, store);
         const body = await readJsonBody(req);
-        const result = store.claimExchangeOrder(session.sub, body?.orderId);
+        const result = await store.claimExchangeOrder(session.sub, body?.orderId);
         sendJson(req, res, 200, { ok: true, ...result });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/game/spin") {
-        const session = getRequiredSession(req, store);
-        const result = store.spin(session.sub);
+        const session = await getRequiredSession(req, store);
+        const result = await store.spin(session.sub);
         sendJson(req, res, 200, { ok: true, ...result });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/game/claim-quest") {
-        const session = getRequiredSession(req, store);
+        const session = await getRequiredSession(req, store);
         const body = await readJsonBody(req);
-        const player = store.claimQuest(session.sub, body?.questId);
+        const player = await store.claimQuest(session.sub, body?.questId);
         sendJson(req, res, 200, { ok: true, player });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/ads/watch") {
-        const session = getRequiredSession(req, store);
+        const session = await getRequiredSession(req, store);
         const body = await readJsonBody(req);
-        const result = store.watchAdReward(session.sub, body?.productId, body?.context || {});
+        const result = await store.watchAdReward(session.sub, body?.productId, body?.context || {});
         sendJson(req, res, 200, { ok: true, ...result });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/events/magic-bird/claim") {
-        const session = getRequiredSession(req, store);
-        const result = store.claimMagicBird(session.sub);
+        const session = await getRequiredSession(req, store);
+        const result = await store.claimMagicBird(session.sub);
         sendJson(req, res, 200, { ok: true, ...result });
         return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/payments/create-invoice") {
-        const session = getRequiredSession(req, store);
+        const session = await getRequiredSession(req, store);
         const body = await readJsonBody(req);
-        const intent = store.createPaymentIntent(session.sub, body?.productId, body?.idempotencyKey || null);
+        const intent = await store.createPaymentIntent(session.sub, body?.productId, body?.idempotencyKey || null);
         if (TELEGRAM_BOT_TOKEN) {
           const invoicePayload = {
             title: intent.product.title,
@@ -494,7 +494,7 @@ function createRouter({ store, driver }) {
 
           const invoiceUrl = await callTelegramBotApi("createInvoiceLink", invoicePayload);
 
-          store.attachInvoiceToPayment(intent.paymentId, {
+          await store.attachInvoiceToPayment(intent.paymentId, {
             invoiceUrl,
             invoiceSlug: extractInvoiceSlug(invoiceUrl),
             rawPayload: {
@@ -517,7 +517,7 @@ function createRouter({ store, driver }) {
           throw new HttpError(503, "Telegram Stars are not configured on this server yet.");
         }
 
-        store.attachInvoiceToPayment(intent.paymentId, {
+        await store.attachInvoiceToPayment(intent.paymentId, {
           invoiceUrl: "",
           invoiceSlug: "dev",
           rawPayload: {
@@ -556,40 +556,40 @@ function createRouter({ store, driver }) {
           return;
         }
 
-        const result = store.completePayment(callback);
+        const result = await store.completePayment(callback);
         sendJson(req, res, 200, { ok: true, ...result });
         return;
       }
 
       if (url.pathname.startsWith("/api/admin/")) {
-        const session = getRequiredSession(req, store);
-        if (!store.isAdminUser(session.sub)) {
+        const session = await getRequiredSession(req, store);
+        if (!await store.isAdminUser(session.sub)) {
           throw new HttpError(403, "Admin access is required.");
         }
 
         if (req.method === "GET" && url.pathname === "/api/admin/players") {
           const search = url.searchParams.get("search") || "";
-          const players = store.listPlayers(search);
+          const players = await store.listPlayers(search);
           sendJson(req, res, 200, { ok: true, players });
           return;
         }
 
         if (req.method === "GET" && url.pathname === "/api/admin/leaderboard") {
           const limit = Number(url.searchParams.get("limit") || 20);
-          const entries = store.getLeaderboard(limit);
+          const entries = await store.getLeaderboard(limit);
           sendJson(req, res, 200, { ok: true, entries });
           return;
         }
 
         if (req.method === "GET" && url.pathname === "/api/admin/suspicious-clickers") {
           const limit = Number(url.searchParams.get("limit") || 50);
-          const players = store.getSuspiciousClickers(limit);
+          const players = await store.getSuspiciousClickers(limit);
           sendJson(req, res, 200, { ok: true, players });
           return;
         }
 
         if (req.method === "GET" && url.pathname === "/api/admin/languages") {
-          const entries = store.getLanguageUsageStats();
+          const entries = await store.getLanguageUsageStats();
           sendJson(req, res, 200, { ok: true, entries });
           return;
         }
@@ -597,28 +597,28 @@ function createRouter({ store, driver }) {
         const playerMatch = url.pathname.match(/^\/api\/admin\/players\/([^/]+)$/);
         if (req.method === "GET" && playerMatch) {
           const telegramUserId = decodeURIComponent(playerMatch[1]);
-          const detail = store.getPlayerDetail(telegramUserId);
+          const detail = await store.getPlayerDetail(telegramUserId);
           sendJson(req, res, 200, { ok: true, ...detail });
           return;
         }
 
         if (req.method === "POST" && url.pathname === "/api/admin/grants") {
           const body = await readJsonBody(req);
-          const player = store.grantResources(session.sub, body);
+          const player = await store.grantResources(session.sub, body);
           sendJson(req, res, 200, { ok: true, player });
           return;
         }
 
         if (req.method === "POST" && url.pathname === "/api/admin/resets") {
           const body = await readJsonBody(req);
-          const player = store.resetPlayer(session.sub, body);
+          const player = await store.resetPlayer(session.sub, body);
           sendJson(req, res, 200, { ok: true, player });
           return;
         }
 
         if (req.method === "GET" && url.pathname === "/api/admin/audit-log") {
           const limit = Number(url.searchParams.get("limit") || 50);
-          const entries = store.getAuditLog(limit);
+          const entries = await store.getAuditLog(limit);
           sendJson(req, res, 200, { ok: true, entries });
           return;
         }

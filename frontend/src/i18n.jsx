@@ -1022,11 +1022,11 @@ const TRANSLATIONS = {
 const TRANSLATION_OVERRIDES = {
   "pl": {
     "language.label": "J\u0119zyk",
-    "loading.connectionLost": "Utracono po\u0142\u0105czenie",
-    "loading.retry": "Po\u0142\u0105cz ponownie",
+    "loading.connectionLost": "Connection lost",
+    "loading.retry": "Reconnect",
     "error.failedConnect": "Nie uda\u0142o si\u0119 po\u0142\u0105czy\u0107 z serwerem gry.",
     "error.gameLocked": "Gra jest zablokowana, dop\u00f3ki serwer znowu si\u0119 nie po\u0142\u0105czy.",
-    "error.lostConnection": "Utracono po\u0142\u0105czenie z serwerem gry.",
+    "error.lostConnection": "Lost connection to the game server.",
     "error.pagesBackendMissing": "Ta wersja z GitHub Pages zawiera tylko frontend. Pod\u0142\u0105cz j\u0105 do wdro\u017conego backendu API z prawdziw\u0105 baz\u0105 danych.",
     "quests.subtitle": "Wykonuj zadania gameplayowe i spo\u0142eczno\u015bciowe, \u017ceby rozwija\u0107 swoje dino imperium.",
     "quests.active": "Aktywne zadania",

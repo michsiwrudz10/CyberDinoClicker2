@@ -1,18 +1,21 @@
-CREATE TABLE players (
-  telegram_user_id BIGINT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS players (
+  telegram_user_id TEXT PRIMARY KEY,
   username TEXT NOT NULL DEFAULT '',
   first_name TEXT NOT NULL DEFAULT '',
   last_name TEXT NOT NULL DEFAULT '',
   language_code TEXT NOT NULL DEFAULT '',
   referral_code TEXT NOT NULL UNIQUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  referred_by_telegram_user_id TEXT,
+  referred_by_code TEXT NOT NULL DEFAULT '',
+  referred_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  last_seen_at TEXT NOT NULL
 );
 
-CREATE TABLE player_state (
-  telegram_user_id BIGINT PRIMARY KEY REFERENCES players(telegram_user_id) ON DELETE CASCADE,
-  meat NUMERIC(20, 2) NOT NULL DEFAULT 0,
+CREATE TABLE IF NOT EXISTS player_state (
+  telegram_user_id TEXT PRIMARY KEY REFERENCES players(telegram_user_id) ON DELETE CASCADE,
+  meat DOUBLE PRECISION NOT NULL DEFAULT 0,
   click_power INTEGER NOT NULL DEFAULT 1,
   click_upgrades INTEGER NOT NULL DEFAULT 0,
   ferns INTEGER NOT NULL DEFAULT 0,
@@ -20,38 +23,70 @@ CREATE TABLE player_state (
   fortune_points INTEGER NOT NULL DEFAULT 0,
   free_spins INTEGER NOT NULL DEFAULT 0,
   spin_index INTEGER NOT NULL DEFAULT 0,
+  lifetime_clicks INTEGER NOT NULL DEFAULT 0,
+  gems DOUBLE PRECISION NOT NULL DEFAULT 0,
+  ticket_price INTEGER NOT NULL DEFAULT 25,
+  loyal_visitors DOUBLE PRECISION NOT NULL DEFAULT 0,
+  laboratory_unlocked BOOLEAN NOT NULL DEFAULT FALSE,
+  laboratory_unlocked_at TEXT,
+  hatchery_unlocked BOOLEAN NOT NULL DEFAULT FALSE,
+  hatchery_unlocked_at TEXT,
+  dino_genes_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  lab_projects_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+  modified_dinos_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+  zoo_history_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+  ad_boosts_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  pending_ad_bonus_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  ad_views_count INTEGER NOT NULL DEFAULT 0,
+  magic_bird_last_claimed_at TEXT,
+  magic_bird_claim_count INTEGER NOT NULL DEFAULT 0,
   referral_successful_invites INTEGER NOT NULL DEFAULT 0,
   referral_pending_invites INTEGER NOT NULL DEFAULT 0,
-  last_passive_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  claimed_invite_milestones_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+  click_chain_started_at TEXT,
+  last_click_at TEXT,
+  suspicious_click_flagged_at TEXT,
+  suspicious_click_chain_seconds INTEGER NOT NULL DEFAULT 0,
+  last_passive_at TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
 );
 
-CREATE TABLE player_inventory (
-  telegram_user_id BIGINT NOT NULL REFERENCES players(telegram_user_id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS player_inventory (
+  telegram_user_id TEXT NOT NULL REFERENCES players(telegram_user_id) ON DELETE CASCADE,
   item_id TEXT NOT NULL,
   quantity INTEGER NOT NULL DEFAULT 0,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TEXT NOT NULL,
   PRIMARY KEY (telegram_user_id, item_id)
 );
 
-CREATE TABLE player_quests (
-  telegram_user_id BIGINT NOT NULL REFERENCES players(telegram_user_id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS player_dino_progress (
+  telegram_user_id TEXT NOT NULL REFERENCES players(telegram_user_id) ON DELETE CASCADE,
+  dino_id TEXT NOT NULL,
+  first_acquired_at TEXT NOT NULL,
+  last_acquired_at TEXT NOT NULL,
+  instances_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (telegram_user_id, dino_id)
+);
+
+CREATE TABLE IF NOT EXISTS player_quests (
+  telegram_user_id TEXT NOT NULL REFERENCES players(telegram_user_id) ON DELETE CASCADE,
   quest_id TEXT NOT NULL,
   type TEXT NOT NULL,
   title_template TEXT NOT NULL DEFAULT '',
   title TEXT NOT NULL,
   level INTEGER NOT NULL DEFAULT 1,
-  target NUMERIC(20, 2) NOT NULL DEFAULT 0,
-  progress NUMERIC(20, 2) NOT NULL DEFAULT 0,
+  target DOUBLE PRECISION NOT NULL DEFAULT 0,
+  progress DOUBLE PRECISION NOT NULL DEFAULT 0,
   reward_json JSONB NOT NULL DEFAULT '{}'::jsonb,
   link TEXT NOT NULL DEFAULT '',
   sort_order INTEGER NOT NULL DEFAULT 0,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TEXT NOT NULL,
   PRIMARY KEY (telegram_user_id, quest_id)
 );
 
-CREATE TABLE shop_products (
+CREATE TABLE IF NOT EXISTS shop_products (
   product_id TEXT PRIMARY KEY,
   kind TEXT NOT NULL DEFAULT 'stars',
   title TEXT NOT NULL,
@@ -60,13 +95,16 @@ CREATE TABLE shop_products (
   reward_amount INTEGER NOT NULL,
   stars_price INTEGER NOT NULL,
   currency TEXT NOT NULL DEFAULT 'XTR',
+  price_label TEXT NOT NULL DEFAULT '',
+  placement TEXT NOT NULL DEFAULT 'shop',
+  highlight_text TEXT NOT NULL DEFAULT '',
   active BOOLEAN NOT NULL DEFAULT TRUE,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TEXT NOT NULL
 );
 
-CREATE TABLE telegram_payments (
-  payment_id UUID PRIMARY KEY,
-  telegram_user_id BIGINT NOT NULL REFERENCES players(telegram_user_id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS telegram_payments (
+  payment_id TEXT PRIMARY KEY,
+  telegram_user_id TEXT NOT NULL REFERENCES players(telegram_user_id) ON DELETE CASCADE,
   product_id TEXT NOT NULL REFERENCES shop_products(product_id),
   status TEXT NOT NULL,
   invoice_url TEXT NOT NULL DEFAULT '',
@@ -77,16 +115,17 @@ CREATE TABLE telegram_payments (
   reward_amount INTEGER NOT NULL,
   stars_price INTEGER NOT NULL,
   raw_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
-  granted_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  granted_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
 );
 
-CREATE TABLE transactions (
-  transaction_id BIGSERIAL PRIMARY KEY,
-  telegram_user_id BIGINT NOT NULL REFERENCES players(telegram_user_id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS transactions (
+  transaction_id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  telegram_user_id TEXT NOT NULL REFERENCES players(telegram_user_id) ON DELETE CASCADE,
   type TEXT NOT NULL,
-  amount_meat NUMERIC(20, 2) NOT NULL DEFAULT 0,
+  amount_meat DOUBLE PRECISION NOT NULL DEFAULT 0,
+  amount_gems DOUBLE PRECISION NOT NULL DEFAULT 0,
   amount_ferns INTEGER NOT NULL DEFAULT 0,
   amount_free_spins INTEGER NOT NULL DEFAULT 0,
   amount_fortune_points INTEGER NOT NULL DEFAULT 0,
@@ -95,27 +134,43 @@ CREATE TABLE transactions (
   source TEXT NOT NULL DEFAULT '',
   metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
   idempotency_key TEXT UNIQUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TEXT NOT NULL
 );
 
-CREATE TABLE admin_users (
-  telegram_user_id BIGINT PRIMARY KEY REFERENCES players(telegram_user_id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS admin_users (
+  telegram_user_id TEXT PRIMARY KEY REFERENCES players(telegram_user_id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL
 );
 
-CREATE TABLE admin_audit_log (
-  audit_id BIGSERIAL PRIMARY KEY,
-  admin_telegram_user_id BIGINT NOT NULL REFERENCES players(telegram_user_id) ON DELETE CASCADE,
-  target_telegram_user_id BIGINT NOT NULL REFERENCES players(telegram_user_id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS admin_audit_log (
+  audit_id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  admin_telegram_user_id TEXT NOT NULL REFERENCES players(telegram_user_id) ON DELETE CASCADE,
+  target_telegram_user_id TEXT NOT NULL REFERENCES players(telegram_user_id) ON DELETE CASCADE,
   action TEXT NOT NULL,
   metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TEXT NOT NULL
 );
 
-CREATE INDEX idx_players_last_seen_at ON players (last_seen_at DESC);
-CREATE INDEX idx_player_state_updated_at ON player_state (updated_at DESC);
-CREATE INDEX idx_player_inventory_updated_at ON player_inventory (updated_at DESC);
-CREATE INDEX idx_player_quests_updated_at ON player_quests (updated_at DESC);
-CREATE INDEX idx_telegram_payments_user_created_at ON telegram_payments (telegram_user_id, created_at DESC);
-CREATE INDEX idx_transactions_user_created_at ON transactions (telegram_user_id, created_at DESC);
-CREATE INDEX idx_admin_audit_log_created_at ON admin_audit_log (created_at DESC);
+CREATE TABLE IF NOT EXISTS player_exchange_orders (
+  order_id TEXT PRIMARY KEY,
+  telegram_user_id TEXT NOT NULL REFERENCES players(telegram_user_id) ON DELETE CASCADE,
+  route_id TEXT NOT NULL,
+  route_name TEXT NOT NULL,
+  route_description TEXT NOT NULL DEFAULT '',
+  image_key TEXT NOT NULL DEFAULT '',
+  resource_type TEXT NOT NULL,
+  resource_amount DOUBLE PRECISION NOT NULL,
+  gem_reward DOUBLE PRECISION NOT NULL,
+  duration_hours DOUBLE PRECISION NOT NULL,
+  created_at TEXT NOT NULL,
+  ready_at TEXT NOT NULL,
+  claimed_at TEXT,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_players_last_seen_at ON players (last_seen_at DESC);
+CREATE INDEX IF NOT EXISTS idx_player_dino_progress_updated_at ON player_dino_progress (updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_telegram_payments_user_created_at ON telegram_payments (telegram_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_user_created_at ON transactions (telegram_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_log_created_at ON admin_audit_log (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_player_exchange_orders_user_created_at ON player_exchange_orders (telegram_user_id, created_at DESC);

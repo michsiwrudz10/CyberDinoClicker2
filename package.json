@@ -9,11 +9,15 @@
     "server": "node backend/index.mjs",
     "build": "vite build",
     "preview": "vite preview",
+    "db:check:postgres": "node scripts/check-postgres.mjs",
+    "db:init:postgres": "node scripts/init-postgres.mjs",
+    "db:migrate:sqlite-to-postgres": "node scripts/migrate-sqlite-to-postgres.mjs",
     "predeploy": "npm run build",
     "pages:clean": "gh-pages-clean",
     "deploy": "gh-pages -d dist -b pages"
   },
   "dependencies": {
+    "pg": "^8.20.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

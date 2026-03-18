@@ -42,7 +42,8 @@ npm run build
 - `dist/`, `node_modules/` i lokalne pliki bazy nie sa przeznaczone do commitowania.
 - GitHub Pages moze wystawic tylko frontend statyczny.
 - Backend i baza danych musza byc hostowane osobno, jesli gra ma dzialac online z zapisem serwerowym.
-- Obecny runtime serwera obsluguje produkcyjnie baze `SQLite` jako plik na trwalym dysku serwera. `Postgres` ma tylko schemat startowy w `backend/db/schema.sql`, ale runtime nie jest jeszcze na niego przepiety.
+- Obecny runtime serwera obsluguje produkcyjnie baze `SQLite` jako plik na trwalym dysku serwera.
+- Repo ma teraz gotowy schemat i skrypty przygotowawcze pod `PostgreSQL / Neon`, ale sam runtime API nie jest jeszcze calkowicie przepiety na `Postgres`.
 
 ## GitHub
 
@@ -96,8 +97,7 @@ Jesli chcesz, zeby wersja z GitHub Pages dzialala online:
 
 1. Wystaw backend Node na osobnym hostingu, np. Render / Railway / VPS.
 2. Daj backendowi trwaly dysk i ustaw plik bazy SQLite, np.:
-   - `DATABASE_URL=file:/var/data/dino.sqlite`
-   - albo `GAME_DB_FILE=/var/data/dino.sqlite`
+   - `GAME_DB_FILE=/var/data/dino.sqlite`
 3. Ustaw CORS:
    - `ALLOWED_ORIGIN=https://michsiwrudz10.github.io`
 4. Ustaw host i port backendu:
@@ -107,3 +107,53 @@ Jesli chcesz, zeby wersja z GitHub Pages dzialala online:
    - `VITE_API_BASE_URL=https://TWOJ_BACKEND.example.com`
 
 Przyklad zmiennych masz w `.env.example`.
+
+## Neon / PostgreSQL prep
+
+Jesli chcesz juz przygotowac baze w Neon:
+
+1. Skopiuj connection string Neon do:
+   - `DATABASE_URL=postgresql://...?...sslmode=require`
+2. Sprawdz polaczenie:
+
+### Windows
+```powershell
+cd C:\DinoGame\webapp
+npm.cmd run db:check:postgres
+```
+
+### Linux
+```bash
+cd ~/Pulpit/v10
+npm run db:check:postgres
+```
+
+3. Utworz schemat i produkty:
+
+### Windows
+```powershell
+cd C:\DinoGame\webapp
+npm.cmd run db:init:postgres
+```
+
+### Linux
+```bash
+cd ~/Pulpit/v10
+npm run db:init:postgres
+```
+
+4. Jesli chcesz przeniesc dane z lokalnego SQLite do Neon:
+
+### Windows
+```powershell
+cd C:\DinoGame\webapp
+npm.cmd run db:migrate:sqlite-to-postgres
+```
+
+### Linux
+```bash
+cd ~/Pulpit/v10
+npm run db:migrate:sqlite-to-postgres
+```
+
+Ten krok kopiuje dane z lokalnego `dino.sqlite` do tabel w Postgresie.
