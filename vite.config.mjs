@@ -7,7 +7,7 @@ const frontendDir = resolve(rootDir, "frontend");
 
 export default defineConfig({
   root: frontendDir,
-  base: "/CyberDinoClicker/",
+  base: "/CyberDinoClicker2/",
   plugins: [react()],
   resolve: {
     alias: {

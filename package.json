@@ -2,7 +2,7 @@
   "name": "dinomeat-webapp",
   "version": "1.0.0",
   "private": true,
-  "homepage": "https://michsiwrudz10.github.io/CyberDinoClicker",
+  "homepage": "https://michsiwrudz10.github.io/CyberDinoClicker2",
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:client": "vite",
