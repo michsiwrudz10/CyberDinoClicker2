@@ -1,0 +1,21 @@
+.fw-shell { max-width:520px; margin:12px auto; background: linear-gradient(180deg,#071029,#071827); color: #e6eef8; padding:12px; border-radius:12px; box-shadow: 0 10px 30px rgba(2,6,23,0.6); }
+.fw-topbar { display:flex; justify-content:space-between; align-items:center; font-weight:700; margin-bottom:8px; }
+.fw-title { font-size:18px; }
+.fw-stats { text-align:right; font-size:13px; color:#cfe8ff; }
+.fw-wheel-wrap { position:relative; height:320px; display:flex; align-items:center; justify-content:center; }
+.fw-wheel { width:320px; height:320px; border-radius:50%; overflow:visible; }
+.fw-seg-path { stroke: rgba(0,0,0,0.15); stroke-width:1px; }
+.fw-seg-0 { fill: #ffb86b; }
+.fw-seg-1 { fill: #ff7ab6; }
+.fw-seg-2 { fill: #7dd3fc; }
+.fw-seg-3 { fill: #a78bfa; }
+.fw-seg-4 { fill: #34d399; }
+.fw-seg-5 { fill: #fca5a5; }
+.fw-seg-label { font-size:12px; fill:#021122; font-weight:800; text-anchor:middle; dominant-baseline:middle; }
+.fw-center { fill: rgba(0,0,0,0.18); }
+.fw-center-label { font-size:14px; fill:#ffffff; font-weight:900; text-anchor:middle; dominant-baseline:middle; }
+/* Usunięto .fw-pointer i animacje związane ze strzałką/ikonką */
+.fw-controls { display:flex; gap:12px; align-items:center; justify-content:center; margin-top:8px; }
+.fw-spin-btn { padding:8px 14px; border-radius:10px; border:none; background: linear-gradient(180deg,#10B981,#059669); color:white; font-weight:800; cursor:pointer; }
+.fw-spin-btn:disabled { background: #94a3b8; cursor:not-allowed; }
+.fw-last { color:#bfe7c8; font-size:13px; }

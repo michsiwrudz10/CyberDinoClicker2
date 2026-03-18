@@ -1,0 +1,28 @@
+* { box-sizing: border-box; }
+
+html, body, #root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  background: #050916;
+}
+
+button {
+  font-family: inherit;
+}
+
+img {
+  max-width: 100%;
+}
+
+@keyframes dinoFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "dinomeat-webapp",
+  "version": "1.0.0",
+  "private": true,
+  "homepage": "https://michsiwrudz10.github.io/CyberDinoClicker",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:client": "vite",
+    "server": "node backend/index.mjs",
+    "build": "vite build",
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "pages:clean": "gh-pages-clean",
+    "deploy": "gh-pages -d dist -b pages"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.3",
+    "autoprefixer": "^10.4.0",
+    "gh-pages": "^6.3.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.3.3",
+    "vite": "^5.0.0"
+  }
+}
