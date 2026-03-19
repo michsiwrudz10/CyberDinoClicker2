@@ -13,13 +13,22 @@ const defaultDbPath = existsSync(backendDbPath) || !existsSync(legacyDbPath) ? b
 const children = [];
 let shuttingDown = false;
 
+function resolveStorageDriver() {
+  if (process.env.STORAGE_DRIVER) return process.env.STORAGE_DRIVER;
+  const databaseUrl = String(process.env.DATABASE_URL || "").trim().toLowerCase();
+  if (databaseUrl && !databaseUrl.startsWith("file:")) {
+    return "postgres";
+  }
+  return "sqlite";
+}
+
 function spawnProcess(name, args, extraEnv = {}) {
   const child = spawn(nodeBinary, args, {
     cwd: rootDir,
     env: {
       ...process.env,
       API_PORT: process.env.API_PORT || "8787",
-      STORAGE_DRIVER: process.env.STORAGE_DRIVER || "sqlite",
+      STORAGE_DRIVER: resolveStorageDriver(),
       GAME_DB_FILE: process.env.GAME_DB_FILE || defaultDbPath,
       ALLOW_DEV_AUTH: process.env.ALLOW_DEV_AUTH || "1",
       ALLOW_DEV_PAYMENTS: process.env.ALLOW_DEV_PAYMENTS || "1",

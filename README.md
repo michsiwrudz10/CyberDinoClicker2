@@ -157,7 +157,7 @@ Wtedy GitHub Pages zacznie wolac prawdziwe API zamiast pustego hosta.
 Jesli chcesz juz przygotowac baze w Neon:
 
 1. Skopiuj connection string Neon do:
-   - `DATABASE_URL=postgresql://...?...sslmode=require`
+   - `DATABASE_URL=postgresql://...?...uselibpqcompat=true&sslmode=require`
 2. Sprawdz polaczenie:
 
 ### Windows

@@ -127,7 +127,7 @@ const SQLITE_TABLES = [
 
 function mapValue(table, column, value) {
   if (value === undefined || value === null) return null;
-  if (table.jsonColumns?.has(column)) return JSON.parse(String(value || "{}"));
+  if (table.jsonColumns?.has(column)) return JSON.stringify(JSON.parse(String(value || "{}")));
   if (table.booleanColumns?.has(column)) return Number(value) > 0;
   return value;
 }

@@ -143,14 +143,16 @@ function toSqliteValue(table, column, value) {
 
 function toPostgresValue(table, column, value) {
   if (value === undefined || value === null) return null;
-  if (table.jsonColumns?.has(column)) return JSON.parse(String(value || "{}"));
+  if (table.jsonColumns?.has(column)) return JSON.stringify(JSON.parse(String(value || "{}")));
   if (table.booleanColumns?.has(column)) return Number(value) > 0;
   return value;
 }
 
 function buildInsertSql(table, placeholderPrefix = "$") {
   const columnList = table.columns.join(", ");
-  const placeholders = table.columns.map((_, index) => `${placeholderPrefix}${index + 1}`).join(", ");
+  const placeholders = placeholderPrefix === "?"
+    ? table.columns.map(() => "?").join(", ")
+    : table.columns.map((_, index) => `${placeholderPrefix}${index + 1}`).join(", ");
   return `INSERT INTO ${table.name} (${columnList}) VALUES (${placeholders})`;
 }
 
