@@ -1527,17 +1527,155 @@ function interpolate(template, values = {}) {
   });
 }
 
+function buildReverseByteMap(label) {
+  try {
+    const decoder = new TextDecoder(label);
+    const reverseMap = new Map();
+    for (let byte = 0; byte <= 255; byte += 1) {
+      const character = decoder.decode(Uint8Array.of(byte));
+      if (character && character.length === 1 && !reverseMap.has(character)) {
+        reverseMap.set(character, byte);
+      }
+    }
+    return reverseMap;
+  } catch {
+    return null;
+  }
+}
+
+const WINDOWS_1250_REVERSE_MAP = buildReverseByteMap("windows-1250");
+const WINDOWS_1252_REVERSE_MAP = buildReverseByteMap("windows-1252");
+const SUSPECT_TRANSLATION_CODES = new Set([
+  0x00c2,
+  0x00c4,
+  0x00c5,
+  0x00cb,
+  0x0102,
+  0x0139,
+  0x0152,
+  0x015a,
+  0x0160,
+  0x0178,
+  0x0179,
+  0x017d,
+  0x0192,
+  0x02c6,
+  0x02dc,
+  0x2013,
+  0x2014,
+  0x2018,
+  0x2019,
+  0x201a,
+  0x201c,
+  0x201d,
+  0x201e,
+  0x2020,
+  0x2021,
+  0x2022,
+  0x2026,
+  0x2030,
+  0x2039,
+  0x203a,
+  0x20ac,
+  0x2122,
+  0xfffd
+]);
+
+function brokennessScore(value) {
+  const text = String(value || "").trim();
+  if (!text) return 0;
+
+  let score = 0;
+  for (const character of text) {
+    const code = character.codePointAt(0);
+    if (SUSPECT_TRANSLATION_CODES.has(code)) {
+      score += code === 0xfffd ? 5 : 2;
+    } else if (character === "?") {
+      score += 1;
+    }
+  }
+
+  return score;
+}
+
+function decodeMojibakeCandidate(text, reverseMap) {
+  if (!reverseMap) return null;
+
+  const bytes = [];
+  for (const character of String(text || "")) {
+    const code = character.codePointAt(0);
+    if (code <= 0x7f) {
+      bytes.push(code);
+      continue;
+    }
+
+    const mapped = reverseMap.get(character);
+    if (mapped === undefined) {
+      return null;
+    }
+    bytes.push(mapped);
+  }
+
+  const decoded = new TextDecoder("utf-8", { fatal: false }).decode(Uint8Array.from(bytes));
+  if (!decoded || decoded.includes("\ufffd")) {
+    return null;
+  }
+
+  return decoded;
+}
+
+function repairMojibake(value) {
+  const original = String(value || "");
+  if (!original) return original;
+
+  let best = original;
+  let bestScore = brokennessScore(original);
+  let current = original;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const candidates = [
+      decodeMojibakeCandidate(current, WINDOWS_1250_REVERSE_MAP),
+      decodeMojibakeCandidate(current, WINDOWS_1252_REVERSE_MAP)
+    ].filter(Boolean);
+
+    let improvedCandidate = null;
+    let improvedScore = bestScore;
+    for (const candidate of candidates) {
+      const candidateScore = brokennessScore(candidate);
+      if (candidateScore < improvedScore) {
+        improvedCandidate = candidate;
+        improvedScore = candidateScore;
+      }
+    }
+
+    if (!improvedCandidate) {
+      break;
+    }
+
+    best = improvedCandidate;
+    bestScore = improvedScore;
+    current = improvedCandidate;
+  }
+
+  return best;
+}
+
+const NORMALIZED_LANGUAGE_OPTIONS = LANGUAGE_OPTIONS.map((language) => ({
+  ...language,
+  label: repairMojibake(language.label)
+}));
+
 function isBrokenTranslation(value) {
   const text = String(value || "").trim();
   if (!text) return false;
   const questionMarks = (text.match(/\?/g) || []).length;
-    const mojibakePatterns = ["\u0102", "\u00C2", "\u00CB", "\uFFFD", "\u00E2\u20AC", "\u00E2\u201A\u00AC", "\u00C4\u201A"];
-  return mojibakePatterns.some((pattern) => text.includes(pattern)) || questionMarks >= Math.max(2, Math.ceil(text.length * 0.35));
+  return brokennessScore(text) >= 2 || questionMarks >= Math.max(2, Math.ceil(text.length * 0.35));
 }
 
 function translateWithLanguage(language, key, values = {}, fallback = "") {
-  const candidate = TRANSLATIONS[language]?.[key];
-  const template = candidate && !isBrokenTranslation(candidate) ? candidate : (fallback ?? key);
+  const candidate = repairMojibake(TRANSLATIONS[language]?.[key] || "");
+  const safeFallback = repairMojibake(fallback ?? key);
+  const template = candidate && !isBrokenTranslation(candidate) ? candidate : safeFallback;
   return interpolate(template, values);
 }
 
@@ -1548,7 +1686,7 @@ export function translateMessage(key, values = {}, fallback = "") {
 const I18nContext = createContext({
   language: "en",
   setLanguage: () => {},
-  languages: LANGUAGE_OPTIONS,
+  languages: NORMALIZED_LANGUAGE_OPTIONS,
   t: (key, values, fallback) => translateWithLanguage(activeLanguage, key, values, fallback)
 });
 
@@ -1568,7 +1706,7 @@ export function I18nProvider({ children }) {
   const value = useMemo(() => ({
     language,
     setLanguage,
-    languages: LANGUAGE_OPTIONS,
+    languages: NORMALIZED_LANGUAGE_OPTIONS,
     t: (key, values = {}, fallback = "") => translateWithLanguage(language, key, values, fallback)
   }), [language]);
 
