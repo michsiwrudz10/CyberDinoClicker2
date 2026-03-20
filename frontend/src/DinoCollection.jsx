@@ -210,6 +210,8 @@ function TicketPanel({ ticketPrice, multiplier, gemIncomePerSec, productionPerSe
   const targetLoyalVisitors = Number(zooEconomy?.targetLoyalVisitors || 0);
   const totalVisitorsPerSecond = Number(zooEconomy?.totalVisitorsPerSecond || 0);
   const dailyGemRevenue = Number(zooEconomy?.dailyGemRevenue || 0);
+  const effectiveMultiplier = Math.max(0.25, Number(multiplier) || 1);
+  const effectiveAttractiveness = Math.max(0, Math.round((Number(totalAttractiveness) || 0) * effectiveMultiplier));
   const walkInDemandPercent = Math.max(0, Math.min(100, Math.round(((Number(zooEconomy?.ticketDemandFactor || multiplier || 0) / 1.2) * 100) || 0)));
   const historyPoints = Array.isArray(zooHistory?.points) ? zooHistory.points : [];
   const isCompact = useCompactLayout(720);
@@ -231,11 +233,12 @@ function TicketPanel({ ticketPrice, multiplier, gemIncomePerSec, productionPerSe
           </div>
         </div>
         <div style={{ padding: "8px 12px", borderRadius: 999, background: "rgba(2,6,23,0.38)", color: "#fef08a", fontWeight: 800 }}>
-          {tt("zoo.attractionMultiplier", { value: fmtSoft(multiplier || 0) }, `Attraction x${fmtSoft(multiplier || 0)}`)}
+          {tt("zoo.attractionMultiplier", { value: fmtSoft(effectiveMultiplier) }, `Attraction x${fmtSoft(effectiveMultiplier)}`)}
         </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 150px), 1fr))", gap: 10 }}>
+        <MetricCard label={tt("zoo.effectiveAttractiveness", {}, "Effective attraction")} value={tt("zoo.charmValue", { value: fmtSoft(effectiveAttractiveness) }, `${fmtSoft(effectiveAttractiveness)} charm`)} note={tt("zoo.ticketEffectNote", { base: fmtSoft(totalAttractiveness || 0), multiplier: fmtSoft(effectiveMultiplier) }, `Base ${fmtSoft(totalAttractiveness || 0)} charm with ticket effect x${fmtSoft(effectiveMultiplier)}.`)} tone="#fde68a" background="linear-gradient(180deg, rgba(146,64,14,0.94), rgba(120,53,15,0.84))" />
         <MetricCard label={tt("zoo.ticketPrice", {}, "Ticket price")} value={tt("zoo.gemsValue", { value: fmtSoft(normalizedDraft) }, `${fmtSoft(normalizedDraft)} gems`)} note={tt("zoo.savedOnServer", {}, "Saved on the server")} tone="#fdba74" background="linear-gradient(180deg, rgba(217,119,6,0.86), rgba(146,64,14,0.76))" />
         <MetricCard label={tt("meta.gemFlow", {}, "Gem flow")} value={`${fmtSoft(gemIncomePerSec)}/s`} note={tt("zoo.passiveVisitorIncome", {}, "Passive income from visitors")} tone="#86efac" background="linear-gradient(180deg, rgba(34,197,94,0.72), rgba(21,128,61,0.72))" />
         <MetricCard label={tt("zoo.chartLoyalVisitors", {}, "Loyal visitors")} value={fmtSoft(loyalVisitors)} note={tt("zoo.targetLoyal", { target: fmtSoft(targetLoyalVisitors) }, `Target ${fmtSoft(targetLoyalVisitors)}`)} tone="#ddd6fe" background="linear-gradient(180deg, rgba(91,33,182,0.84), rgba(49,46,129,0.76))" />
@@ -1260,7 +1263,7 @@ export default function DinoCollection({
     <>
       <div style={{ display: "grid", gap: isCompact ? 14 : 18 }}>
         <div style={{ display: "grid", gridTemplateColumns: isCompact ? "repeat(2, minmax(0, 1fr))" : "repeat(auto-fit, minmax(180px, 1fr))", gap: isCompact ? 10 : 12 }}>
-          <MetricCard label={tt("resource.charm", {}, "Total attractiveness")} value={fmt(collection?.totalAttractiveness || 0)} note={tt("zoo.publicPull", {}, "Your public zoo pull")} tone="#fde68a" background="linear-gradient(180deg, rgba(146,64,14,0.94), rgba(120,53,15,0.84))" />
+          <MetricCard label={tt("resource.charm", {}, "Total attractiveness")} value={fmt(Math.max(0, Math.round((Number(collection?.totalAttractiveness || 0) || 0) * Math.max(0.25, Number(ticketAttractivenessMultiplier || 1) || 1))))} note={tt("zoo.ticketEffectNote", { base: fmt(collection?.totalAttractiveness || 0), multiplier: fmtSoft(ticketAttractivenessMultiplier || 1) }, `Base ${fmt(collection?.totalAttractiveness || 0)} charm with ticket effect x${fmtSoft(ticketAttractivenessMultiplier || 1)}.`)} tone="#fde68a" background="linear-gradient(180deg, rgba(146,64,14,0.94), rgba(120,53,15,0.84))" />
           <MetricCard label={tt("resource.gems", {}, "Gems")} value={fmtSoft(gems || 0)} note={tt("zoo.paidByVisitors", {}, "Paid by your visitors")} tone="#bbf7d0" background="linear-gradient(180deg, rgba(170,215,186,0.94), rgba(107,158,124,0.78))" />
           <MetricCard label={tt("zoo.adultMeatFlow", {}, "Adult meat flow")} value={`${fmtSoft(totalAdultMeatProduction)}/s`} note={tt("zoo.tradeInExchange", {}, "Can be sold in Exchange")} tone="#fde68a" background="linear-gradient(180deg, rgba(146,64,14,0.94), rgba(120,53,15,0.84))" />
           <MetricCard label={tt("zoo.adultFernFlow", {}, "Adult fern flow")} value={`${fmtSoft(totalAdultFernProduction)}/s`} note={tt("zoo.tradeInExchange", {}, "Can be sold in Exchange")} tone="#86efac" background="linear-gradient(180deg, rgba(22,101,52,0.94), rgba(21,128,61,0.84))" />

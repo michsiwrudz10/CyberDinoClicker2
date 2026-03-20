@@ -50,7 +50,13 @@ import {
   ZOO_PROMOTIONS
 } from "../../shared/game-content.mjs";
 import { clearPendingReferralCode, getPendingReferralCode } from "./utils/referrals";
-import { computeQuestFromTemplate, formatCompactNumber, getQuestTemplateById } from "../../shared/game-mechanics.mjs";
+import {
+  computeQuestFromTemplate,
+  computeZooEconomyStats,
+  formatCompactNumber,
+  getQuestTemplateById,
+  getTicketAttractivenessMultiplier
+} from "../../shared/game-mechanics.mjs";
 import useCompactLayout from "./utils/useCompactLayout";
 import { normalizeLanguage, useI18n } from "./i18n";
 import {
@@ -374,6 +380,18 @@ function formatSoftNumber(value) {
   if (number >= 10) return number.toFixed(1).replace(/\.0$/, "");
   if (number >= 1) return number.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
   return number > 0 ? number.toFixed(3).replace(/0+$/, "").replace(/\.$/, "") : "0";
+}
+
+function applyGemBoostToEconomySnapshot(zooEconomy = {}, gemsMultiplier = 1) {
+  const multiplier = Math.max(1, Number(gemsMultiplier) || 1);
+  const dailyGemRevenue = Number(zooEconomy?.dailyGemRevenue || 0) * multiplier;
+
+  return {
+    ...zooEconomy,
+    gemIncomePerSec: Number(zooEconomy?.gemIncomePerSec || 0) * multiplier,
+    dailyGemRevenue,
+    revenueProgressPercent: Math.max(0, Math.min(100, Math.round((Math.log10(dailyGemRevenue + 10) / 8) * 100)))
+  };
 }
 
 export default function App() {
@@ -714,6 +732,31 @@ export default function App() {
       throw new Error("The game is locked until the server reconnects.");
     }
 
+    const previousPlayer = clonePlayerSnapshot(playerRef.current);
+    const normalizedTicketPrice = Math.max(5, Math.min(100, Math.round(Number(nextTicketPrice) || 25)));
+
+    applyOptimisticPlayerUpdate((draft) => {
+      if (!draft?.state) return draft;
+
+      draft.state.ticketPrice = normalizedTicketPrice;
+
+      if (draft.derived) {
+        const totalAttractiveness = Math.max(0, Number(draft.derived.totalAttractiveness || 0) || 0);
+        const loyalVisitors = Math.max(0, Number(draft.state.loyalVisitors || draft.derived?.zooEconomy?.loyalVisitors || 0) || 0);
+        const gemsMultiplier = Math.max(1, Number(draft.derived?.adBoosts?.gemsMultiplier || 1) || 1);
+        const nextEconomy = applyGemBoostToEconomySnapshot(
+          computeZooEconomyStats(totalAttractiveness, normalizedTicketPrice, loyalVisitors),
+          gemsMultiplier
+        );
+
+        draft.derived.ticketAttractivenessMultiplier = getTicketAttractivenessMultiplier(normalizedTicketPrice);
+        draft.derived.zooEconomy = nextEconomy;
+        draft.derived.gemIncomePerSec = nextEconomy.gemIncomePerSec;
+      }
+
+      return draft;
+    });
+
     setTicketBusy(true);
     setBanner("");
 
@@ -722,6 +765,10 @@ export default function App() {
       applyPlayerSnapshot(response.player);
       setStatus("connected");
     } catch (error) {
+      if (previousPlayer) {
+        setPlayer(previousPlayer);
+        playerRef.current = previousPlayer;
+      }
       setStatus(shouldLockForError(error) ? "blocked" : "connected");
       setBanner(error instanceof Error ? error.message : "Ticket price update failed.");
       throw error;
@@ -1424,7 +1471,7 @@ export default function App() {
       <PassDrawer
         open={passOpen}
         onClose={() => setPassOpen(false)}
-        pass={player?.pass}
+        pass={localizedPass}
         totalAttractiveness={derived?.totalAttractiveness || 0}
         elitePassOwned={Boolean(elitePassOffer?.alreadyPurchased)}
         onOpenElitePassOffer={() => setElitePassOfferOpen(true)}

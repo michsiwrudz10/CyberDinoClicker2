@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useI18n } from "../i18n";
 
 const base = import.meta.env.BASE_URL || "/";
@@ -128,6 +128,16 @@ export default function PassDrawer({
   onOpenElitePassOffer = () => {}
 }) {
   const { t, language } = useI18n();
+  const currentTierRef = useRef(null);
+
+  useEffect(() => {
+    if (!open || !pass) return;
+    currentTierRef.current?.scrollIntoView({
+      block: "center",
+      behavior: "smooth"
+    });
+  }, [open, pass?.absoluteLevel, pass?.currentLevel]);
+
   if (!open || !pass) return null;
 
   const currentEraLabel = pass?.currentEra?.label || "Small Zoo";
@@ -207,13 +217,23 @@ export default function PassDrawer({
           {Array.isArray(pass.tiers) ? pass.tiers.map((tier) => (
             <div
               key={tier.level}
+              ref={tier.isCurrent ? currentTierRef : null}
               style={{
                 padding: 16,
                 borderRadius: 18,
-                background: tier.unlocked ? "rgba(34,197,94,0.11)" : "rgba(255,255,255,0.04)",
-                border: tier.unlocked ? "1px solid rgba(74,222,128,0.28)" : "1px solid rgba(255,255,255,0.08)",
+                background: tier.isCurrent
+                  ? "linear-gradient(180deg, rgba(59,130,246,0.22), rgba(30,64,175,0.14))"
+                  : tier.unlocked
+                    ? "rgba(34,197,94,0.11)"
+                    : "rgba(255,255,255,0.04)",
+                border: tier.isCurrent
+                  ? "1px solid rgba(96,165,250,0.42)"
+                  : tier.unlocked
+                    ? "1px solid rgba(74,222,128,0.28)"
+                    : "1px solid rgba(255,255,255,0.08)",
                 display: "grid",
-                gap: 10
+                gap: 10,
+                boxShadow: tier.isCurrent ? "0 0 0 2px rgba(96,165,250,0.18), 0 16px 34px rgba(30,64,175,0.18)" : "none"
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
