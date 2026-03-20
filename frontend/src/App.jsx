@@ -121,7 +121,7 @@ async function requestAuthedJson(path, token, body = {}) {
 
 function shouldLockForError(error) {
   const status = Number(error?.status || 0);
-  return !status || status >= 500 || status === 401 || status === 403;
+  return error?.code === "PAGES_BACKEND_MISSING" || status === 401 || status === 403;
 }
 
 function getReadableErrorMessage(error, t, fallbackKey = "error.actionFailed") {
@@ -432,7 +432,7 @@ export default function App() {
 
     const intervalId = setInterval(() => {
       void refreshPlayer().catch((error) => {
-        setStatus("blocked");
+        setStatus(shouldLockForError(error) ? "blocked" : "connected");
         setBanner(getReadableErrorMessage(error, t, "error.lostConnection"));
       });
     }, REFRESH_INTERVAL_MS);
