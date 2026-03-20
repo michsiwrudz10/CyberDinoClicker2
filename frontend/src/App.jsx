@@ -302,6 +302,12 @@ function triggerFeedback(pattern = 24) {
   } catch {}
 }
 
+function delay(ms = 0) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, Math.max(0, Number(ms) || 0));
+  });
+}
+
 function shouldVibrateOnSuccess(label = "") {
   return label === "magic-bird"
     || label === "upgrade"
@@ -469,6 +475,7 @@ export default function App() {
   const busyActionRef = useRef("");
   const mutationVersionRef = useRef(0);
   const playerRef = useRef(null);
+  const bootProgressRef = useRef(6);
 
   useEffect(() => {
     initTelegramChrome();
@@ -490,6 +497,10 @@ export default function App() {
 
     return () => clearInterval(intervalId);
   }, [status, bootTarget]);
+
+  useEffect(() => {
+    bootProgressRef.current = bootProgress;
+  }, [bootProgress]);
 
   const applyAuth = (authResponse) => {
     setToken(authResponse.token || "");
@@ -542,14 +553,26 @@ export default function App() {
     setBootTarget(18);
     setBootMessage(t("boot.opening", {}, "Opening your dinosaur island..."));
 
+    const waitForBootProgress = async (target, timeoutMs = 1400) => {
+      const normalizedTarget = Math.max(0, Math.min(100, Number(target) || 0));
+      const deadline = Date.now() + Math.max(0, Number(timeoutMs) || 0);
+      while (bootProgressRef.current < normalizedTarget && Date.now() < deadline) {
+        // Keep this tiny so the bar finishes smoothly without adding a large fake delay.
+        // The timeout protects us from waiting forever if a later state interrupts boot.
+        await delay(16);
+      }
+    };
+
     try {
+      await delay(120);
       const authPayload = getTelegramAuthPayload();
       if (!authPayload) {
         throw new Error(t("error.openTelegram", {}, "Open this game inside Telegram. For local tests, run the dev server with Telegram dev auth enabled."));
       }
 
-      setBootTarget(38);
+      setBootTarget(42);
       setBootMessage(t("boot.checking", {}, "Checking Telegram identity..."));
+      await delay(140);
       const referralCode = getPendingReferralCode();
       const authResponse = await authenticateTelegram({
         ...authPayload,
@@ -558,16 +581,20 @@ export default function App() {
       applyAuth(authResponse);
       clearPendingReferralCode();
 
-      setBootTarget(72);
+      setBootTarget(74);
       setBootMessage(t("boot.syncing", {}, "Syncing cloud save and dinosaur sanctuary..."));
+      await delay(120);
       if (!authResponse.player) {
         await refreshPlayer();
-      } else {
-        setStatus("connected");
       }
 
-      setBootTarget(100);
+      setBootTarget(92);
       setBootMessage(t("boot.ready", {}, "Island ready."));
+      await waitForBootProgress(92, 1800);
+      setBootTarget(100);
+      await waitForBootProgress(100, 1200);
+      await delay(80);
+      setStatus("connected");
     } catch (error) {
       setStatus("blocked");
       setBootTarget(100);
