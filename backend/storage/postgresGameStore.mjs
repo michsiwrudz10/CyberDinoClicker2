@@ -175,7 +175,13 @@ export class PostgresGameStore {
       adminIds: this.adminIds
     });
     this.readyPromise = null;
+    this.hydrationPromise = null;
+    this.cacheHydrated = false;
     this.queue = Promise.resolve();
+    this.persistTimer = null;
+    this.persistQueued = false;
+    this.persistInFlight = false;
+    this.persistPromise = Promise.resolve();
   }
 
   async initialize() {
@@ -202,10 +208,87 @@ export class PostgresGameStore {
     return this.readyPromise;
   }
 
+  async ensureHydrated(force = false) {
+    if (!force && this.cacheHydrated) {
+      return;
+    }
+
+    if (!force && this.hydrationPromise) {
+      return this.hydrationPromise;
+    }
+
+    this.hydrationPromise = (async () => {
+      await this.ensureReady();
+      const client = await this.pool.connect();
+
+      try {
+        await this.syncPostgresToSqlite(client);
+        this.cacheHydrated = true;
+      } finally {
+        client.release();
+        this.hydrationPromise = null;
+      }
+    })();
+
+    return this.hydrationPromise;
+  }
+
   enqueue(task) {
     const next = this.queue.then(task, task);
     this.queue = next.catch(() => {});
     return next;
+  }
+
+  schedulePersist(delayMs = 200) {
+    this.persistQueued = true;
+    if (this.persistTimer) return this.persistPromise;
+
+    this.persistTimer = setTimeout(() => {
+      this.persistTimer = null;
+      void this.flushPersistQueue().catch(() => {});
+    }, Math.max(0, Number(delayMs) || 0));
+
+    this.persistTimer.unref?.();
+    return this.persistPromise;
+  }
+
+  async flushPersistQueue(force = false) {
+    if (!force && !this.persistQueued && !this.persistInFlight) {
+      return this.persistPromise;
+    }
+
+    if (this.persistInFlight) {
+      return this.persistPromise;
+    }
+
+    this.persistQueued = false;
+    this.persistInFlight = true;
+
+    this.persistPromise = (async () => {
+      await this.ensureReady();
+      const client = await this.pool.connect();
+
+      try {
+        await client.query("BEGIN");
+        await client.query("SELECT pg_advisory_xact_lock($1)", [ADVISORY_LOCK_KEY]);
+        await this.syncSqliteToPostgres(client);
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        throw error;
+      } finally {
+        client.release();
+      }
+    })();
+
+    try {
+      return await this.persistPromise;
+    } finally {
+      this.persistInFlight = false;
+      if (this.persistQueued) {
+        this.schedulePersist(0);
+      }
+    }
   }
 
   async seedShopProducts(client) {
@@ -348,33 +431,26 @@ export class PostgresGameStore {
     `);
   }
 
-  async withStore(callback, { write = false } = {}) {
+  async withStore(callback, { write = false, persistMode = "immediate", forceHydrate = false } = {}) {
     return this.enqueue(async () => {
       await this.ensureReady();
-      const client = await this.pool.connect();
+      await this.ensureHydrated(forceHydrate);
 
       try {
-        if (write) {
-          await client.query("BEGIN");
-          await client.query("SELECT pg_advisory_xact_lock($1)", [ADVISORY_LOCK_KEY]);
-        }
-
-        await this.syncPostgresToSqlite(client);
         const result = callback(this.sqliteStore);
 
         if (write) {
-          await this.syncSqliteToPostgres(client);
-          await client.query("COMMIT");
+          if (persistMode === "background") {
+            this.schedulePersist();
+          } else {
+            this.persistQueued = true;
+            await this.flushPersistQueue(true);
+          }
         }
 
         return result;
       } catch (error) {
-        if (write) {
-          await client.query("ROLLBACK").catch(() => {});
-        }
         throw error;
-      } finally {
-        client.release();
       }
     });
   }
@@ -384,11 +460,11 @@ export class PostgresGameStore {
   }
 
   ensurePlayer(telegramUser, incomingReferralCode = "") {
-    return this.withStore((store) => store.ensurePlayer(telegramUser, incomingReferralCode), { write: true });
+    return this.withStore((store) => store.ensurePlayer(telegramUser, incomingReferralCode), { write: true, persistMode: "immediate" });
   }
 
   setPlayerLanguage(telegramUserId, languageCode) {
-    return this.withStore((store) => store.setPlayerLanguage(telegramUserId, languageCode), { write: true });
+    return this.withStore((store) => store.setPlayerLanguage(telegramUserId, languageCode), { write: true, persistMode: "background" });
   }
 
   getLanguageUsageStats() {
@@ -400,87 +476,87 @@ export class PostgresGameStore {
   }
 
   getPlayerSnapshot(telegramUserId) {
-    return this.withStore((store) => store.getPlayerSnapshot(telegramUserId), { write: true });
+    return this.withStore((store) => store.getPlayerSnapshot(telegramUserId), { write: true, persistMode: "background" });
   }
 
   tap(telegramUserId, count = 1) {
-    return this.withStore((store) => store.tap(telegramUserId, count), { write: true });
+    return this.withStore((store) => store.tap(telegramUserId, count), { write: true, persistMode: "background" });
   }
 
   upgradeClick(telegramUserId) {
-    return this.withStore((store) => store.upgradeClick(telegramUserId), { write: true });
+    return this.withStore((store) => store.upgradeClick(telegramUserId), { write: true, persistMode: "background" });
   }
 
   purchaseDino(telegramUserId, itemId, requestedSex = "") {
-    return this.withStore((store) => store.purchaseDino(telegramUserId, itemId, requestedSex), { write: true });
+    return this.withStore((store) => store.purchaseDino(telegramUserId, itemId, requestedSex), { write: true, persistMode: "background" });
   }
 
   setTicketPrice(telegramUserId, ticketPrice) {
-    return this.withStore((store) => store.setTicketPrice(telegramUserId, ticketPrice), { write: true });
+    return this.withStore((store) => store.setTicketPrice(telegramUserId, ticketPrice), { write: true, persistMode: "background" });
   }
 
   buyLaboratory(telegramUserId) {
-    return this.withStore((store) => store.buyLaboratory(telegramUserId), { write: true });
+    return this.withStore((store) => store.buyLaboratory(telegramUserId), { write: true, persistMode: "background" });
   }
 
   unlockHatchery(telegramUserId) {
-    return this.withStore((store) => store.unlockHatchery(telegramUserId), { write: true });
+    return this.withStore((store) => store.unlockHatchery(telegramUserId), { write: true, persistMode: "background" });
   }
 
   createLabEgg(telegramUserId, dinoId, requestedSex = "") {
-    return this.withStore((store) => store.createLabEgg(telegramUserId, dinoId, requestedSex), { write: true });
+    return this.withStore((store) => store.createLabEgg(telegramUserId, dinoId, requestedSex), { write: true, persistMode: "background" });
   }
 
   buyGene(telegramUserId, projectId, geneId) {
-    return this.withStore((store) => store.buyGene(telegramUserId, projectId, geneId), { write: true });
+    return this.withStore((store) => store.buyGene(telegramUserId, projectId, geneId), { write: true, persistMode: "background" });
   }
 
   buyGenotype(telegramUserId, projectId, genotypeId) {
-    return this.withStore((store) => store.buyGenotype(telegramUserId, projectId, genotypeId), { write: true });
+    return this.withStore((store) => store.buyGenotype(telegramUserId, projectId, genotypeId), { write: true, persistMode: "background" });
   }
 
   breedDinosaurs(telegramUserId, motherSpeciesId, fatherSpeciesId) {
-    return this.withStore((store) => store.breedDinosaurs(telegramUserId, motherSpeciesId, fatherSpeciesId), { write: true });
+    return this.withStore((store) => store.breedDinosaurs(telegramUserId, motherSpeciesId, fatherSpeciesId), { write: true, persistMode: "background" });
   }
 
   hatchProject(telegramUserId, projectId) {
-    return this.withStore((store) => store.hatchProject(telegramUserId, projectId), { write: true });
+    return this.withStore((store) => store.hatchProject(telegramUserId, projectId), { write: true, persistMode: "background" });
   }
 
   createExchangeOrder(telegramUserId, routeId, resourceType, amount) {
-    return this.withStore((store) => store.createExchangeOrder(telegramUserId, routeId, resourceType, amount), { write: true });
+    return this.withStore((store) => store.createExchangeOrder(telegramUserId, routeId, resourceType, amount), { write: true, persistMode: "background" });
   }
 
   claimExchangeOrder(telegramUserId, orderId) {
-    return this.withStore((store) => store.claimExchangeOrder(telegramUserId, orderId), { write: true });
+    return this.withStore((store) => store.claimExchangeOrder(telegramUserId, orderId), { write: true, persistMode: "background" });
   }
 
   spin(telegramUserId) {
-    return this.withStore((store) => store.spin(telegramUserId), { write: true });
+    return this.withStore((store) => store.spin(telegramUserId), { write: true, persistMode: "background" });
   }
 
   claimQuest(telegramUserId, questId) {
-    return this.withStore((store) => store.claimQuest(telegramUserId, questId), { write: true });
+    return this.withStore((store) => store.claimQuest(telegramUserId, questId), { write: true, persistMode: "background" });
   }
 
   watchAdReward(telegramUserId, productId, context = {}) {
-    return this.withStore((store) => store.watchAdReward(telegramUserId, productId, context), { write: true });
+    return this.withStore((store) => store.watchAdReward(telegramUserId, productId, context), { write: true, persistMode: "background" });
   }
 
   claimMagicBird(telegramUserId) {
-    return this.withStore((store) => store.claimMagicBird(telegramUserId), { write: true });
+    return this.withStore((store) => store.claimMagicBird(telegramUserId), { write: true, persistMode: "background" });
   }
 
   createPaymentIntent(telegramUserId, productId, idempotencyKey = null) {
-    return this.withStore((store) => store.createPaymentIntent(telegramUserId, productId, idempotencyKey), { write: true });
+    return this.withStore((store) => store.createPaymentIntent(telegramUserId, productId, idempotencyKey), { write: true, persistMode: "immediate" });
   }
 
   attachInvoiceToPayment(paymentId, invoiceData = {}) {
-    return this.withStore((store) => store.attachInvoiceToPayment(paymentId, invoiceData), { write: true });
+    return this.withStore((store) => store.attachInvoiceToPayment(paymentId, invoiceData), { write: true, persistMode: "immediate" });
   }
 
   completePayment(callbackPayload = {}) {
-    return this.withStore((store) => store.completePayment(callbackPayload), { write: true });
+    return this.withStore((store) => store.completePayment(callbackPayload), { write: true, persistMode: "immediate" });
   }
 
   listPlayers(search = "", limit) {
@@ -488,7 +564,7 @@ export class PostgresGameStore {
   }
 
   getPlayerDetail(telegramUserId) {
-    return this.withStore((store) => store.getPlayerDetail(telegramUserId), { write: true });
+    return this.withStore((store) => store.getPlayerDetail(telegramUserId), { write: true, persistMode: "background" });
   }
 
   getSuspiciousClickers(limit) {
@@ -500,11 +576,11 @@ export class PostgresGameStore {
   }
 
   grantResources(adminTelegramUserId, payload = {}) {
-    return this.withStore((store) => store.grantResources(adminTelegramUserId, payload), { write: true });
+    return this.withStore((store) => store.grantResources(adminTelegramUserId, payload), { write: true, persistMode: "immediate" });
   }
 
   resetPlayer(adminTelegramUserId, payload = {}) {
-    return this.withStore((store) => store.resetPlayer(adminTelegramUserId, payload), { write: true });
+    return this.withStore((store) => store.resetPlayer(adminTelegramUserId, payload), { write: true, persistMode: "immediate" });
   }
 
   getAuditLog(limit) {
