@@ -1376,6 +1376,7 @@ export default function App() {
             gemIncomePerSec={derived?.gemIncomePerSec || 0}
             productionPerSec={derived?.productionPerSec || 0}
             fernProductionPerSec={derived?.fernProductionPerSec || 0}
+            ticketAttractivenessMultiplier={derived?.ticketAttractivenessMultiplier || 1}
             zooEconomy={derived?.zooEconomy || null}
             zooHistory={derived?.zooHistory || null}
             market={player?.market || null}
