@@ -50,7 +50,7 @@ import {
   ZOO_PROMOTIONS
 } from "../../shared/game-content.mjs";
 import { clearPendingReferralCode, getPendingReferralCode } from "./utils/referrals";
-import { formatCompactNumber } from "../../shared/game-mechanics.mjs";
+import { computeQuestFromTemplate, formatCompactNumber, getQuestTemplateById } from "../../shared/game-mechanics.mjs";
 import useCompactLayout from "./utils/useCompactLayout";
 import { normalizeLanguage, useI18n } from "./i18n";
 import {
@@ -69,6 +69,7 @@ import {
 } from "./utils/localizedGameData";
 
 const REFRESH_INTERVAL_MS = 30000;
+const QUEST_MEAT_REWARD_SECONDS = 5 * 60;
 const ADMIN_URL = `${import.meta.env.BASE_URL || "/"}admin.html`;
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const RESOURCE_ICONS = {
@@ -142,6 +143,87 @@ function pickLatestPlayerSnapshot(currentPlayer, nextPlayer) {
   const nextUpdatedAt = getPlayerLastUpdatedMs(nextPlayer);
 
   return nextUpdatedAt >= currentUpdatedAt ? nextPlayer : currentPlayer;
+}
+
+function clonePlayerSnapshot(player) {
+  if (!player) return player;
+
+  if (typeof structuredClone === "function") {
+    try {
+      return structuredClone(player);
+    } catch {}
+  }
+
+  return JSON.parse(JSON.stringify(player));
+}
+
+function incrementQuestProgressLocally(quests = [], type, amount) {
+  if (!Array.isArray(quests) || !type || !amount) return;
+
+  for (const quest of quests) {
+    if (quest?.type !== type) continue;
+    const target = Number(quest?.target || 0);
+    const progress = Number(quest?.progress || 0);
+    if (progress >= target) continue;
+    quest.progress = Math.min(target, progress + amount);
+  }
+}
+
+function applyRewardToPlayerSnapshot(player, reward = {}) {
+  if (!player?.state) return;
+
+  const normalizedMeat = Math.max(0, Number(reward.meat || 0) || 0);
+  const normalizedFerns = Math.max(0, Number(reward.ferns || 0) || 0);
+  const normalizedGems = Math.max(0, Number(reward.gems || 0) || 0);
+  const normalizedSpins = Math.max(0, Number(reward.freeSpins || 0) || 0);
+  const normalizedFortunePoints = Math.max(0, Number(reward.fortunePoints || 0) || 0);
+
+  player.state.meat = Math.max(0, Number(player.state.meat || 0) + normalizedMeat);
+  player.state.ferns = Math.max(0, Number(player.state.ferns || 0) + normalizedFerns);
+  player.state.gems = Math.max(0, Number(player.state.gems || 0) + normalizedGems);
+  player.state.freeSpins = Math.max(0, Number(player.state.freeSpins || 0) + normalizedSpins);
+  player.state.fortunePoints = Math.max(0, Number(player.state.fortunePoints || 0) + normalizedFortunePoints);
+
+  if (player.profileStats) {
+    player.profileStats.lifetimeMeatEarned = Math.max(0, Number(player.profileStats.lifetimeMeatEarned || 0) + normalizedMeat);
+  }
+
+  if (player.derived) {
+    player.derived.totalSpins = Math.max(0, Number(player.state.freeSpins || 0) + Number(player.state.fortunePoints || 0));
+  }
+
+  incrementQuestProgressLocally(player.state.quests, "meat", normalizedMeat);
+  incrementQuestProgressLocally(player.state.quests, "ferns", normalizedFerns);
+}
+
+function scaleQuestRewardLocally(quest, productionPerSec = 0) {
+  if (!quest?.reward?.meat) return quest;
+
+  return {
+    ...quest,
+    reward: {
+      ...quest.reward,
+      meat: Math.max(
+        Math.floor(Number(quest.reward.meat || 0)),
+        Math.floor(Math.max(0, Number(productionPerSec) || 0) * QUEST_MEAT_REWARD_SECONDS)
+      )
+    }
+  };
+}
+
+function buildNextQuestStateLocally(quest, productionPerSec = 0) {
+  const template = getQuestTemplateById(quest?.id);
+  if (!template) return quest;
+
+  const rebuilt = computeQuestFromTemplate(template, Math.max(1, Number(quest?.level || 1) + 1));
+  const scaled = scaleQuestRewardLocally(rebuilt, productionPerSec);
+  return {
+    ...quest,
+    ...scaled,
+    id: quest.id,
+    type: scaled.type || quest.type,
+    link: quest.link || scaled.link || ""
+  };
 }
 
 function getReadableErrorMessage(error, t, fallbackKey = "error.actionFailed") {
@@ -324,6 +406,9 @@ export default function App() {
   const starterOfferShownRef = useRef(false);
   const hydratedLanguageUserRef = useRef("");
   const pendingLanguageWriteRef = useRef("");
+  const busyActionRef = useRef("");
+  const mutationVersionRef = useRef(0);
+  const playerRef = useRef(null);
 
   useEffect(() => {
     initTelegramChrome();
@@ -361,11 +446,29 @@ export default function App() {
     setPlayer((current) => pickLatestPlayerSnapshot(current, nextPlayer));
   };
 
+  const applyOptimisticPlayerUpdate = (updater) => {
+    setPlayer((current) => {
+      const draft = clonePlayerSnapshot(current);
+      if (!draft) return current;
+      const updated = updater(draft) || draft;
+      return updated;
+    });
+  };
+
+  const markMutationStarted = () => {
+    mutationVersionRef.current += 1;
+    return mutationVersionRef.current;
+  };
+
   const refreshPlayer = async () => {
     const currentToken = tokenRef.current;
     if (!currentToken) throw new Error(t("error.missingSession", {}, "Telegram session is missing."));
+    const requestMutationVersion = mutationVersionRef.current;
 
     const response = await getPlayerMe(currentToken);
+    if (requestMutationVersion !== mutationVersionRef.current) {
+      return playerRef.current;
+    }
     applyPlayerSnapshot(response.player);
     setIsAdmin(Boolean(response.isAdmin));
     setStatus("connected");
@@ -459,9 +562,18 @@ export default function App() {
   }, [language, persistedPlayerLanguage, player, token]);
 
   useEffect(() => {
+    busyActionRef.current = busyAction;
+  }, [busyAction]);
+
+  useEffect(() => {
+    playerRef.current = player;
+  }, [player]);
+
+  useEffect(() => {
     if (!token) return undefined;
 
     const intervalId = setInterval(() => {
+      if (busyActionRef.current) return;
       void refreshPlayer().catch((error) => {
         setStatus(shouldLockForError(error) ? "blocked" : "connected");
         setBanner(getReadableErrorMessage(error, t, "error.lostConnection"));
@@ -514,6 +626,7 @@ export default function App() {
       throw new Error(t("error.gameLocked", {}, "The game is locked until the server reconnects."));
     }
 
+    markMutationStarted();
     setBusyAction(label);
     setBanner("");
 
@@ -558,9 +671,23 @@ export default function App() {
 
   const handleTap = () => {
     if (!tokenRef.current || status === "blocked") return;
+    markMutationStarted();
     try {
       navigator.vibrate?.(15);
     } catch {}
+    const tapValue = Math.max(1, Number(playerRef.current?.state?.clickPower || player?.state?.clickPower || 1) || 1);
+    applyOptimisticPlayerUpdate((draft) => {
+      if (!draft?.state) return draft;
+      draft.state.meat = Math.max(0, Number(draft.state.meat || 0) + tapValue);
+      draft.state.lifetimeClicks = Math.max(0, Number(draft.state.lifetimeClicks || 0) + 1);
+      if (draft.profileStats) {
+        draft.profileStats.lifetimeClicks = Math.max(0, Number(draft.profileStats.lifetimeClicks || 0) + 1);
+        draft.profileStats.lifetimeMeatEarned = Math.max(0, Number(draft.profileStats.lifetimeMeatEarned || 0) + tapValue);
+      }
+      incrementQuestProgressLocally(draft.state.quests, "clicks", 1);
+      incrementQuestProgressLocally(draft.state.quests, "meat", tapValue);
+      return draft;
+    });
     tapBufferRef.current += 1;
     void flushTapQueue();
   };
@@ -604,10 +731,41 @@ export default function App() {
   };
 
   const handleClaimQuest = async (questId) => {
-    await runAction(`quest:${questId}`, async () => {
-      const response = await claimQuest(tokenRef.current, questId);
-      applyPlayerSnapshot(response.player);
-    });
+    const previousPlayer = clonePlayerSnapshot(playerRef.current);
+    const currentQuest = playerRef.current?.state?.quests?.find((entry) => entry.id === questId);
+
+    if (currentQuest) {
+      applyOptimisticPlayerUpdate((draft) => {
+        const quests = draft?.state?.quests || [];
+        const questIndex = quests.findIndex((entry) => entry.id === questId);
+        if (questIndex < 0) return draft;
+
+        const quest = quests[questIndex];
+        if (quest.type === "social") {
+          quest.progress = Math.max(Number(quest.progress || 0), Number(quest.target || 0));
+          applyRewardToPlayerSnapshot(draft, quest.reward);
+          return draft;
+        }
+
+        if (Number(quest.progress || 0) >= Number(quest.target || 0)) {
+          applyRewardToPlayerSnapshot(draft, quest.reward);
+          quests[questIndex] = buildNextQuestStateLocally(quest, draft?.derived?.productionPerSec || 0);
+        }
+        return draft;
+      });
+    }
+
+    try {
+      await runAction(`quest:${questId}`, async () => {
+        const response = await claimQuest(tokenRef.current, questId);
+        applyPlayerSnapshot(response.player);
+      });
+    } catch (error) {
+      if (previousPlayer) {
+        setPlayer(previousPlayer);
+      }
+      throw error;
+    }
   };
 
   const handleBuyLaboratory = async () => {
