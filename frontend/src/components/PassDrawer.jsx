@@ -133,7 +133,7 @@ export default function PassDrawer({
   useEffect(() => {
     if (!open || !pass) return;
     currentTierRef.current?.scrollIntoView({
-      block: "center",
+      block: "nearest",
       behavior: "smooth"
     });
   }, [open, pass?.absoluteLevel, pass?.currentLevel]);
@@ -161,7 +161,7 @@ export default function PassDrawer({
           gridTemplateRows: "auto 1fr auto"
         }}
       >
-        <div style={{ position: "sticky", top: 0, zIndex: 2, padding: 22, background: "linear-gradient(180deg, rgba(8,18,41,0.98), rgba(8,18,41,0.92))", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "grid", gap: 18 }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 2, padding: 22, background: "linear-gradient(180deg, rgba(8,18,41,0.98), rgba(8,18,41,0.92))", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "grid", gap: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}>
             <div>
               <div style={{ fontSize: 30, fontWeight: 900 }}>{passCopy(language, "seasonPass")}</div>
@@ -209,11 +209,10 @@ export default function PassDrawer({
               </div>
             </div>
           </div>
-
-          <EraPreviewCard pass={pass} language={language} />
         </div>
 
         <div style={{ overflowY: "auto", padding: "18px 22px", display: "grid", gap: 12, alignContent: "start" }}>
+          <EraPreviewCard pass={pass} language={language} />
           {Array.isArray(pass.tiers) ? pass.tiers.map((tier) => (
             <div
               key={tier.level}
@@ -233,7 +232,8 @@ export default function PassDrawer({
                     : "1px solid rgba(255,255,255,0.08)",
                 display: "grid",
                 gap: 10,
-                boxShadow: tier.isCurrent ? "0 0 0 2px rgba(96,165,250,0.18), 0 16px 34px rgba(30,64,175,0.18)" : "none"
+                boxShadow: tier.isCurrent ? "0 0 0 2px rgba(96,165,250,0.18), 0 16px 34px rgba(30,64,175,0.18)" : "none",
+                scrollMarginTop: 16
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>

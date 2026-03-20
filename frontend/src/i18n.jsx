@@ -1506,10 +1506,20 @@ const CLEAN_POLISH_ERROR_TRANSLATIONS = {
   "error.notEnoughMeatBreeding": "Za ma\u0142o mi\u0119sa, aby zach\u0119ci\u0107 dinozaury do rozmna\u017cania."
 };
 
+const CLEAN_POLISH_MARKET_ROUTE_TRANSLATIONS = {
+  "content.marketRoute.local_market.name": "Lokalny rynek",
+  "content.marketRoute.local_market.description": "Sprzedaj od razu na pobliskim rynku. Wypłata jest natychmiastowa, ale kurs klejnotów jest niższy.",
+  "content.marketRoute.capital_shipment.name": "Wysyłka do stolicy",
+  "content.marketRoute.capital_shipment.description": "Przygotuj transport do stolicy. Czekasz dłużej, ale dostajesz lepszy kurs wymiany.",
+  "content.marketRoute.foreign_export.name": "Wysyłka za granicę",
+  "content.marketRoute.foreign_export.description": "Wyślij towar za granicę. To najwolniejsza trasa, ale daje najwyższą wypłatę w klejnotach."
+};
+
 TRANSLATION_OVERRIDES.pl = {
   ...(TRANSLATION_OVERRIDES.pl || {}),
   ...CLEAN_POLISH_TRANSLATIONS,
-  ...CLEAN_POLISH_ERROR_TRANSLATIONS
+  ...CLEAN_POLISH_ERROR_TRANSLATIONS,
+  ...CLEAN_POLISH_MARKET_ROUTE_TRANSLATIONS
 };
 
 Object.entries(TRANSLATION_OVERRIDES).forEach(([language, entries]) => {

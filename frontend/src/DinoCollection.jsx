@@ -80,6 +80,26 @@ function formatDurationHours(hours = 0) {
   return `${normalized}h`;
 }
 
+function localizeExchangeRoute(route) {
+  if (!route) return route;
+  return {
+    ...route,
+    name: tt(`content.marketRoute.${route.id}.name`, {}, route.name),
+    description: tt(`content.marketRoute.${route.id}.description`, {}, route.description)
+  };
+}
+
+function localizeExchangeOrder(order) {
+  if (!order) return order;
+  const routeId = String(order.routeId || "");
+  if (!routeId) return order;
+  return {
+    ...order,
+    title: tt(`content.marketRoute.${routeId}.name`, {}, order.title),
+    description: tt(`content.marketRoute.${routeId}.description`, {}, order.description)
+  };
+}
+
 function getMarketEstimate(route, resourceType, amount) {
   const normalizedAmount = Math.max(0, Math.floor(Number(amount) || 0));
   const rate = resourceType === "ferns" ? Number(route?.fernGemRate || 0) : Number(route?.meatGemRate || 0);
@@ -897,9 +917,9 @@ function BreedingTab({ naturalEntries, onBreed, busyAction }) {
 }
 
 function ExchangeTab({ meat = 0, ferns = 0, gems = 0, productionPerSec = 0, fernProductionPerSec = 0, market = null, onCreateExchangeOrder = () => {}, onClaimExchangeOrder = () => {}, busyAction = "" }) {
-  const routes = Array.isArray(market?.routes) ? market.routes : [];
-  const activeOrders = Array.isArray(market?.activeOrders) ? market.activeOrders : [];
-  const recentOrders = Array.isArray(market?.recentOrders) ? market.recentOrders : [];
+  const routes = Array.isArray(market?.routes) ? market.routes.map(localizeExchangeRoute) : [];
+  const activeOrders = Array.isArray(market?.activeOrders) ? market.activeOrders.map(localizeExchangeOrder) : [];
+  const recentOrders = Array.isArray(market?.recentOrders) ? market.recentOrders.map(localizeExchangeOrder) : [];
   const [resourceType, setResourceType] = useState(() => (Number(ferns) > 0 ? "ferns" : "meat"));
   const [amountDraft, setAmountDraft] = useState("");
 
