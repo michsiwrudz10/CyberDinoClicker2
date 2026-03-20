@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import { createGameStateStore } from "./storage/index.mjs";
 
 const API_PORT = Number(process.env.PORT || process.env.API_PORT || 8787);
-const API_HOST = process.env.API_HOST || "127.0.0.1";
+const API_HOST = process.env.API_HOST || (process.env.PORT ? "0.0.0.0" : "127.0.0.1");
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const SESSION_SECRET = process.env.SESSION_SECRET || TELEGRAM_BOT_TOKEN || "dev-session-secret";
