@@ -1,8 +1,4 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
-
-function buildApiUrl(path) {
-  return `${API_BASE_URL}${path}`;
-}
+const GITHUB_PAGES_API_BASE_URL = "https://cyberdinoclicker.onrender.com";
 
 function isGitHubPagesRuntime() {
   try {
@@ -10,6 +6,25 @@ function isGitHubPagesRuntime() {
   } catch {
     return false;
   }
+}
+
+function resolveApiBaseUrl() {
+  const explicitBaseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+  if (explicitBaseUrl) {
+    return explicitBaseUrl;
+  }
+
+  if (isGitHubPagesRuntime()) {
+    return GITHUB_PAGES_API_BASE_URL;
+  }
+
+  return "";
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
+
+function buildApiUrl(path) {
+  return `${API_BASE_URL}${path}`;
 }
 
 function createNetworkError(originalError) {
