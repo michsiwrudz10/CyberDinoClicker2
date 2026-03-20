@@ -124,6 +124,26 @@ function shouldLockForError(error) {
   return error?.code === "PAGES_BACKEND_MISSING" || status === 401 || status === 403;
 }
 
+function getPlayerLastUpdatedMs(player) {
+  const candidate =
+    player?.derived?.lastUpdatedAt ||
+    player?.state?.updatedAt ||
+    player?.telegramUser?.lastSeenAt ||
+    "";
+  const parsed = Date.parse(candidate);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function pickLatestPlayerSnapshot(currentPlayer, nextPlayer) {
+  if (!nextPlayer) return currentPlayer;
+  if (!currentPlayer) return nextPlayer;
+
+  const currentUpdatedAt = getPlayerLastUpdatedMs(currentPlayer);
+  const nextUpdatedAt = getPlayerLastUpdatedMs(nextPlayer);
+
+  return nextUpdatedAt >= currentUpdatedAt ? nextPlayer : currentPlayer;
+}
+
 function getReadableErrorMessage(error, t, fallbackKey = "error.actionFailed") {
   if (error?.code === "PAGES_BACKEND_MISSING") {
     return t(
@@ -331,7 +351,14 @@ export default function App() {
     tokenRef.current = authResponse.token || "";
     setViewer(authResponse.viewer || getTelegramViewerPreview());
     setIsAdmin(Boolean(authResponse.isAdmin));
-    if (authResponse.player) setPlayer(authResponse.player);
+    if (authResponse.player) {
+      setPlayer((current) => pickLatestPlayerSnapshot(current, authResponse.player));
+    }
+  };
+
+  const applyPlayerSnapshot = (nextPlayer) => {
+    if (!nextPlayer) return;
+    setPlayer((current) => pickLatestPlayerSnapshot(current, nextPlayer));
   };
 
   const refreshPlayer = async () => {
@@ -339,7 +366,7 @@ export default function App() {
     if (!currentToken) throw new Error(t("error.missingSession", {}, "Telegram session is missing."));
 
     const response = await getPlayerMe(currentToken);
-    setPlayer(response.player);
+    applyPlayerSnapshot(response.player);
     setIsAdmin(Boolean(response.isAdmin));
     setStatus("connected");
     return response.player;
@@ -370,7 +397,11 @@ export default function App() {
 
       setBootTarget(72);
       setBootMessage(t("boot.syncing", {}, "Syncing cloud save and dinosaur sanctuary..."));
-      await refreshPlayer();
+      if (!authResponse.player) {
+        await refreshPlayer();
+      } else {
+        setStatus("connected");
+      }
 
       setBootTarget(100);
       setBootMessage(t("boot.ready", {}, "Island ready."));
@@ -410,7 +441,7 @@ export default function App() {
       .then((response) => {
         if (cancelled) return;
         pendingLanguageWriteRef.current = "";
-        setPlayer(response.player);
+        applyPlayerSnapshot(response.player);
         setViewer((current) => ({
           ...current,
           languageCode: nextLanguage
@@ -514,7 +545,7 @@ export default function App() {
 
     try {
       const response = await tapGame(tokenRef.current, count);
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
       setStatus("connected");
     } catch (error) {
       tapBufferRef.current = 0;
@@ -537,14 +568,14 @@ export default function App() {
   const handleUpgradeClick = async () => {
     await runAction("upgrade", async () => {
       const response = await upgradeClick(tokenRef.current);
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
     });
   };
 
   const handlePurchaseDino = async (dino, sex = "male") => {
     await runAction(`purchase:${dino.id}:${sex}`, async () => {
       const response = await purchaseDino(tokenRef.current, dino.id, sex);
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
       if (response.purchaseMilestone) {
         setPurchaseMilestoneReward(response.purchaseMilestone);
       }
@@ -561,7 +592,7 @@ export default function App() {
 
     try {
       const response = await setZooTicketPrice(tokenRef.current, nextTicketPrice);
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
       setStatus("connected");
     } catch (error) {
       setStatus(shouldLockForError(error) ? "blocked" : "connected");
@@ -575,77 +606,77 @@ export default function App() {
   const handleClaimQuest = async (questId) => {
     await runAction(`quest:${questId}`, async () => {
       const response = await claimQuest(tokenRef.current, questId);
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
     });
   };
 
   const handleBuyLaboratory = async () => {
     await runAction("laboratory:unlock", async () => {
       const response = await buyLaboratory(tokenRef.current);
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
     });
   };
 
   const handleUnlockHatchery = async () => {
     await runAction("hatchery:unlock", async () => {
       const response = await unlockHatchery(tokenRef.current);
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
     });
   };
 
   const handleCreateLabEgg = async (dino, sex = "male") => {
     await runAction(`egg:${dino.id}:${sex}`, async () => {
       const response = await createLabEgg(tokenRef.current, dino.id, sex);
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
     });
   };
 
   const handleBuyGene = async (projectId, geneId) => {
     await runAction(`gene:${projectId}:${geneId}`, async () => {
       const response = await buyDinoGene(tokenRef.current, projectId, geneId);
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
     });
   };
 
   const handleBuyGenotype = async (projectId, genotypeId) => {
     await runAction(`genotype:${projectId}:${genotypeId}`, async () => {
       const response = await buyDinoGenotype(tokenRef.current, projectId, genotypeId);
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
     });
   };
 
   const handleHatchEgg = async (projectId) => {
     await runAction(`hatch:${projectId}`, async () => {
       const response = await hatchLabEgg(tokenRef.current, projectId);
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
     });
   };
 
   const handleBreed = async (motherSpeciesId, fatherSpeciesId) => {
     await runAction(`breed:${motherSpeciesId}:${fatherSpeciesId}`, async () => {
       const response = await breedDinosaurs(tokenRef.current, motherSpeciesId, fatherSpeciesId);
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
     });
   };
 
   const handleCreateExchangeOrder = async (routeId, resourceType, amount) => {
     await runAction(`market:create:${routeId}:${resourceType}`, async () => {
       const response = await requestAuthedJson("/api/market/create-order", tokenRef.current, { routeId, resourceType, amount });
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
     });
   };
 
   const handleClaimExchangeOrder = async (orderId) => {
     await runAction(`market:claim:${orderId}`, async () => {
       const response = await requestAuthedJson("/api/market/claim-order", tokenRef.current, { orderId });
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
     });
   };
 
   const handleSpin = async () => {
     return runAction("spin", async () => {
       const response = await spinWheel(tokenRef.current);
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
       return {
         reward: response.reward,
         rewardId: response.rewardId,
@@ -683,7 +714,7 @@ export default function App() {
   const handleWatchAd = async (productId, context = {}) => {
     await runAction(`ad:${productId}`, async () => {
       const response = await watchAdReward(tokenRef.current, productId, context);
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
       if (selectedStoreProductId === productId) {
         setSelectedStoreProductId("");
       }
@@ -696,7 +727,7 @@ export default function App() {
   const handleClaimMagicBird = async () => {
     await runAction("magic-bird", async () => {
       const response = await claimMagicBird(tokenRef.current);
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
       setMagicBirdOffer(response.offer || null);
       setBanner("Magic bird left you a sky offer.");
     });
@@ -706,7 +737,7 @@ export default function App() {
 
     await runAction(`dev-payment:${latestInvoice.paymentId}`, async () => {
       const response = await completeDevPayment(latestInvoice.paymentId);
-      setPlayer(response.player);
+      applyPlayerSnapshot(response.player);
       setLatestInvoice(null);
       setBanner("Dev payment completed and rewards were granted from the server.");
     });
