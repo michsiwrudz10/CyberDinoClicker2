@@ -79,7 +79,7 @@ export default function Clicker({
             <div style={{ fontSize: isCompact ? 22 : 30, fontWeight: 900 }}>Lv. {pass?.absoluteLevel || pass?.currentLevel || 1}</div>
             <div style={{ color: "#9CA3AF", fontSize: isCompact ? 12 : 14 }}>{pass?.xp || 0} XP</div>
           </div>
-          <div style={{ marginTop: 4, color: "#94a3b8", fontSize: isCompact ? 11 : 12 }}>{pass?.currentEra?.label || t("content.era.small_zoo.label", {}, "Small Zoo")} • {t("clicker.eraLevel", { level: pass?.eraLevel || pass?.currentLevel || 1 }, `Era level ${pass?.eraLevel || pass?.currentLevel || 1}`)}</div>
+          <div style={{ marginTop: 4, color: "#94a3b8", fontSize: isCompact ? 11 : 12 }}>{pass?.currentEra?.label || t("content.era.small_zoo.label", {}, "Small Zoo")} | {t("clicker.eraLevel", { level: pass?.eraLevel || pass?.currentLevel || 1 }, `Era level ${pass?.eraLevel || pass?.currentLevel || 1}`)}</div>
         </div>
       </div>
 

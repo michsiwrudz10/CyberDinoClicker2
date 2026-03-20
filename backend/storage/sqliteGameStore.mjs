@@ -2522,7 +2522,7 @@ export class SQLiteGameStore {
 
       mutable.state.meat -= price;
       mutable.state.clickUpgrades += 1;
-      mutable.state.clickPower = Math.floor(mutable.state.clickPower * 1.6) + 1;
+      mutable.state.clickPower = Math.floor(mutable.state.clickPower * 1.45) + 1;
       this.incrementQuestProgress(mutable.quests, "upgrade", 1);
       this.saveMutableState(telegramUserId, mutable, stamp);
 
