@@ -1490,9 +1490,26 @@ const CLEAN_POLISH_TRANSLATIONS = {
   "content.quest.social_x.title": "Obserwuj nas na X"
 };
 
+const CLEAN_POLISH_ERROR_TRANSLATIONS = {
+  "error.notEnoughResources": "Za ma\u0142o zasob\u00f3w.",
+  "error.notEnoughMeatDino": "Za ma\u0142o mi\u0119sa na tego dinozaura.",
+  "error.notEnoughFernsDino": "Za ma\u0142o paproci na tego dinozaura.",
+  "error.notEnoughFernsPromotion": "Za ma\u0142o paproci na t\u0119 promocj\u0119.",
+  "error.notEnoughMeatUpgrade": "Za ma\u0142o mi\u0119sa na to ulepszenie.",
+  "error.notEnoughMeatShipment": "Za ma\u0142o mi\u0119sa na t\u0119 wysy\u0142k\u0119.",
+  "error.notEnoughFernsShipment": "Za ma\u0142o paproci na t\u0119 wysy\u0142k\u0119.",
+  "error.notEnoughGemsLaboratory": "Za ma\u0142o klejnot\u00f3w na laboratorium.",
+  "error.notEnoughGemsHatchery": "Za ma\u0142o klejnot\u00f3w na wyl\u0119garni\u0119.",
+  "error.notEnoughGemsEgg": "Za ma\u0142o klejnot\u00f3w na to jajko laboratoryjne.",
+  "error.notEnoughGemsGenotype": "Za ma\u0142o klejnot\u00f3w na ten genotyp.",
+  "error.notEnoughGemsGene": "Za ma\u0142o klejnot\u00f3w na ten gen.",
+  "error.notEnoughMeatBreeding": "Za ma\u0142o mi\u0119sa, aby zach\u0119ci\u0107 dinozaury do rozmna\u017cania."
+};
+
 TRANSLATION_OVERRIDES.pl = {
   ...(TRANSLATION_OVERRIDES.pl || {}),
-  ...CLEAN_POLISH_TRANSLATIONS
+  ...CLEAN_POLISH_TRANSLATIONS,
+  ...CLEAN_POLISH_ERROR_TRANSLATIONS
 };
 
 Object.entries(TRANSLATION_OVERRIDES).forEach(([language, entries]) => {

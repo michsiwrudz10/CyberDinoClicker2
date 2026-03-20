@@ -246,6 +246,48 @@ function getReadableErrorMessage(error, t, fallbackKey = "error.actionFailed") {
   }
 
   if (error instanceof Error && error.message) {
+    const normalizedMessage = error.message.trim().toLowerCase();
+
+    if (normalizedMessage.includes("not enough meat for this dinosaur")) {
+      return t("error.notEnoughMeatDino", {}, "Not enough meat for this dinosaur.");
+    }
+    if (normalizedMessage.includes("not enough ferns for this dinosaur")) {
+      return t("error.notEnoughFernsDino", {}, "Not enough ferns for this dinosaur.");
+    }
+    if (normalizedMessage.includes("not enough ferns for this promotion")) {
+      return t("error.notEnoughFernsPromotion", {}, "Not enough ferns for this promotion.");
+    }
+    if (normalizedMessage.includes("not enough meat for a click upgrade")) {
+      return t("error.notEnoughMeatUpgrade", {}, "Not enough meat for this upgrade.");
+    }
+    if (normalizedMessage.includes("not enough meat for this shipment")) {
+      return t("error.notEnoughMeatShipment", {}, "Not enough meat for this shipment.");
+    }
+    if (normalizedMessage.includes("not enough ferns for this shipment")) {
+      return t("error.notEnoughFernsShipment", {}, "Not enough ferns for this shipment.");
+    }
+    if (normalizedMessage.includes("not enough gems for the laboratory")) {
+      return t("error.notEnoughGemsLaboratory", {}, "Not enough gems for the laboratory.");
+    }
+    if (normalizedMessage.includes("not enough gems for the hatchery")) {
+      return t("error.notEnoughGemsHatchery", {}, "Not enough gems for the hatchery.");
+    }
+    if (normalizedMessage.includes("not enough gems for this laboratory egg")) {
+      return t("error.notEnoughGemsEgg", {}, "Not enough gems for this laboratory egg.");
+    }
+    if (normalizedMessage.includes("not enough gems for this genotype")) {
+      return t("error.notEnoughGemsGenotype", {}, "Not enough gems for this genotype.");
+    }
+    if (normalizedMessage.includes("not enough gems for this gene")) {
+      return t("error.notEnoughGemsGene", {}, "Not enough gems for this gene.");
+    }
+    if (normalizedMessage.includes("not enough meat to encourage breeding")) {
+      return t("error.notEnoughMeatBreeding", {}, "Not enough meat to encourage breeding.");
+    }
+    if (normalizedMessage.includes("not enough")) {
+      return t("error.notEnoughResources", {}, "Not enough resources.");
+    }
+
     return error.message;
   }
 
@@ -639,6 +681,31 @@ export default function App() {
     }
   }, [player?.ads?.pendingBonus?.productId]);
 
+  useEffect(() => {
+    if (!banner) return undefined;
+
+    const persistentBanners = new Set([
+      t("error.failedConnect", {}, "Failed to connect to the game server."),
+      t("error.lostConnection", {}, "Lost connection to the game server."),
+      t(
+        "error.pagesBackendMissing",
+        {},
+        "This GitHub Pages version only has the frontend. Connect it to a deployed backend API with a real database."
+      ),
+      t("error.gameLocked", {}, "The game is locked until the server reconnects.")
+    ]);
+
+    if (status === "blocked" || persistentBanners.has(banner)) {
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setBanner((current) => (current === banner ? "" : current));
+    }, 3500);
+
+    return () => clearTimeout(timeoutId);
+  }, [banner, status, t]);
+
   const runAction = async (label, action) => {
     if (!tokenRef.current || status === "blocked") {
       throw new Error(t("error.gameLocked", {}, "The game is locked until the server reconnects."));
@@ -657,7 +724,7 @@ export default function App() {
       return result;
     } catch (error) {
       setStatus(shouldLockForError(error) ? "blocked" : "connected");
-      const message = error instanceof Error ? error.message : t("error.actionFailed", {}, "Action failed.");
+      const message = getReadableErrorMessage(error, t, "error.actionFailed");
       setBanner(message);
       throw error;
     } finally {
@@ -681,7 +748,7 @@ export default function App() {
     } catch (error) {
       tapBufferRef.current = 0;
       setStatus(shouldLockForError(error) ? "blocked" : "connected");
-      setBanner(error instanceof Error ? error.message : "Tap sync failed.");
+      setBanner(getReadableErrorMessage(error, t, "error.actionFailed"));
     } finally {
       tapInFlightRef.current = false;
     }
@@ -770,7 +837,7 @@ export default function App() {
         playerRef.current = previousPlayer;
       }
       setStatus(shouldLockForError(error) ? "blocked" : "connected");
-      setBanner(error instanceof Error ? error.message : "Ticket price update failed.");
+      setBanner(getReadableErrorMessage(error, t, "error.actionFailed"));
       throw error;
     } finally {
       setTicketBusy(false);
