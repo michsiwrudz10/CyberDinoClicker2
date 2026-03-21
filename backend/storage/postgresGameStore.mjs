@@ -531,8 +531,8 @@ export class PostgresGameStore {
     return this.withStore((store) => store.claimExchangeOrder(telegramUserId, orderId), { write: true, persistMode: "background" });
   }
 
-  spin(telegramUserId) {
-    return this.withStore((store) => store.spin(telegramUserId), { write: true, persistMode: "background" });
+  spin(telegramUserId, multiplier = 1) {
+    return this.withStore((store) => store.spin(telegramUserId, multiplier), { write: true, persistMode: "background" });
   }
 
   claimQuest(telegramUserId, questId) {

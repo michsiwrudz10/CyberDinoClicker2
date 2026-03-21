@@ -972,13 +972,14 @@ export default function App() {
     });
   };
 
-  const handleSpin = async () => {
+  const handleSpin = async ({ multiplier = 1 } = {}) => {
     return runAction("spin", async () => {
-      const response = await spinWheel(tokenRef.current);
+      const response = await spinWheel(tokenRef.current, multiplier);
       applyPlayerSnapshot(response.player);
       return {
         reward: response.reward,
         rewardId: response.rewardId,
+        spinMultiplier: response.spinMultiplier || multiplier || 1,
         remainingSpins: (response.player?.state?.freeSpins || 0) + (response.player?.state?.fortunePoints || 0),
         showFortuneBonus: response.rewardId === "meat_60" && response.player?.ads?.pendingBonus?.productId === AD_FORTUNE_MEAT_BONUS_PRODUCT_ID
       };

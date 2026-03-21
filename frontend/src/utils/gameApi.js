@@ -181,10 +181,11 @@ export function breedDinosaurs(token, motherSpeciesId, fatherSpeciesId) {
   });
 }
 
-export function spinWheel(token) {
+export function spinWheel(token, multiplier = 1) {
   return request("/api/game/spin", {
     method: "POST",
-    headers: withAuth(token)
+    headers: withAuth(token),
+    body: JSON.stringify({ multiplier })
   });
 }
 

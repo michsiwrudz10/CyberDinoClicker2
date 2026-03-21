@@ -444,7 +444,8 @@ function createRouter({ store, driver }) {
 
       if (req.method === "POST" && url.pathname === "/api/game/spin") {
         const session = await getRequiredSession(req, store);
-        const result = await store.spin(session.sub);
+        const body = await readJsonBody(req);
+        const result = await store.spin(session.sub, body?.multiplier);
         sendJson(req, res, 200, { ok: true, ...result });
         return;
       }

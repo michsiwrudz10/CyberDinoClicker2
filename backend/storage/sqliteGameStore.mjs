@@ -134,6 +134,47 @@ function serializePendingAdBonus(value = {}) {
   return JSON.stringify(normalizePendingAdBonus(value));
 }
 
+function scaleRewardByMultiplier(reward = {}, multiplier = 1) {
+  const normalized = cloneReward(reward);
+  const factor = Math.max(1, clampInteger(multiplier, 1));
+  if (factor === 1) return normalized;
+
+  return {
+    meat: Math.max(0, Math.floor((normalized.meat || 0) * factor)),
+    gems: Math.max(0, toFiniteNumber(normalized.gems, 0) * factor),
+    ferns: Math.max(0, clampInteger((normalized.ferns || 0) * factor, 0)),
+    freeSpins: Math.max(0, clampInteger((normalized.freeSpins || 0) * factor, 0)),
+    fortunePoints: Math.max(0, clampInteger((normalized.fortunePoints || 0) * factor, 0))
+  };
+}
+
+function consumeSpinPool(state, requestedCount = 1) {
+  const spinCost = Math.max(1, clampInteger(requestedCount, 1));
+  const availableFreeSpins = Math.max(0, clampInteger(state.freeSpins, 0));
+  const availableFortunePoints = Math.max(0, clampInteger(state.fortunePoints, 0));
+  const totalAvailable = availableFreeSpins + availableFortunePoints;
+
+  if (totalAvailable < spinCost) {
+    throw new Error(spinCost >= 10 ? "You need at least 10 spins." : "You need at least one spin.");
+  }
+
+  const freeSpinsUsed = Math.min(availableFreeSpins, spinCost);
+  const fortunePointsUsed = Math.min(availableFortunePoints, spinCost - freeSpinsUsed);
+  state.freeSpins = availableFreeSpins - freeSpinsUsed;
+  state.fortunePoints = availableFortunePoints - fortunePointsUsed;
+
+  return {
+    freeSpins: -freeSpinsUsed,
+    fortunePoints: -fortunePointsUsed,
+    count: spinCost,
+    kind: freeSpinsUsed > 0 && fortunePointsUsed > 0
+      ? "mixed"
+      : freeSpinsUsed > 0
+        ? "freeSpins"
+        : "fortunePoints"
+  };
+}
+
 function isTimestampActive(value, stamp = nowIso()) {
   const targetMs = parseTimestampMs(value);
   const stampMs = parseTimestampMs(stamp) || Date.now();
@@ -3311,30 +3352,22 @@ export class SQLiteGameStore {
       return this.buildSnapshot(mutable);
     });
   }
-  spin(telegramUserId) {
+  spin(telegramUserId, requestedMultiplier = 1) {
     return this.withTransaction(() => {
       const mutable = this.loadMutableState(telegramUserId);
       const stamp = nowIso();
       this.applyPassiveProgress(mutable, stamp);
       clearExpiredAdState(mutable.state, stamp);
       const activeAdBoosts = getActiveAdBoostSummary(mutable.state.adBoosts, stamp);
+      const spinMultiplier = Number(requestedMultiplier) >= 10 ? 10 : 1;
 
-      let consumed = null;
-      if (mutable.state.freeSpins > 0) {
-        mutable.state.freeSpins -= 1;
-        consumed = { freeSpins: -1, kind: "freeSpins" };
-      } else if (mutable.state.fortunePoints > 0) {
-        mutable.state.fortunePoints -= 1;
-        consumed = { fortunePoints: -1, kind: "fortunePoints" };
-      } else {
-        throw new Error("You need at least one spin.");
-      }
+      const consumed = consumeSpinPool(mutable.state, spinMultiplier);
 
       const rewardEntry = getSpinReward(
         mutable.state.spinIndex,
         computeProductionPerSecond(mutable.inventory, mutable.dinoProgress, stamp, mutable.state.dinoGenes, mutable.state.modifiedDinos) * activeAdBoosts.meatMultiplier
       );
-      const reward = rewardEntry?.reward || {};
+      const reward = scaleRewardByMultiplier(rewardEntry?.reward || {}, spinMultiplier);
       mutable.state.spinIndex += 1;
       if (rewardEntry?.id === "meat_60" && reward?.meat > 0) {
         mutable.state.pendingAdBonus = buildPendingFortuneAdBonus(reward.meat, mutable.state.spinIndex, stamp);
@@ -3342,7 +3375,7 @@ export class SQLiteGameStore {
         mutable.state.pendingAdBonus = normalizePendingAdBonus({});
       }
       const appliedReward = this.applyReward(mutable, reward);
-      this.incrementQuestProgress(mutable.quests, "spins", 1);
+      this.incrementQuestProgress(mutable.quests, "spins", spinMultiplier);
       this.saveMutableState(telegramUserId, mutable, stamp);
 
       this.logTransaction(telegramUserId, {
@@ -3355,15 +3388,18 @@ export class SQLiteGameStore {
         metadata: {
           reward,
           rewardId: rewardEntry?.id || null,
-          consumed: consumed.kind
+          consumed: consumed.kind,
+          spinCost: consumed.count,
+          spinMultiplier
         },
-        idempotencyKey: `spin:${telegramUserId}:${stamp}:${mutable.state.spinIndex}`
+        idempotencyKey: `spin:${telegramUserId}:${stamp}:${mutable.state.spinIndex}:x${spinMultiplier}`
       });
 
       mutable.player = this.getPlayerRow(telegramUserId);
       return {
         reward: cloneReward(reward),
         rewardId: rewardEntry?.id || null,
+        spinMultiplier,
         player: this.buildSnapshot(mutable)
       };
     });

@@ -65,12 +65,10 @@ export default function DinoFeeder({
   const [error, setError] = useState("");
   const [rotation, setRotation] = useState(0);
   const [autoSpin, setAutoSpin] = useState(false);
-  const [batchSpinsRemaining, setBatchSpinsRemaining] = useState(0);
   const [spinDurationMs, setSpinDurationMs] = useState(4200);
   const rotationRef = useRef(0);
   const longPressTimerRef = useRef(null);
   const autoSpinRef = useRef(false);
-  const batchSpinRef = useRef(0);
   const suppressClickRef = useRef(false);
 
   const displayedFreeSpins = typeof freeSpins === "number" ? freeSpins : 0;
@@ -96,8 +94,6 @@ export default function DinoFeeder({
   function stopSpinModes() {
     autoSpinRef.current = false;
     setAutoSpin(false);
-    batchSpinRef.current = 0;
-    setBatchSpinsRemaining(0);
     clearLongPressTimer();
   }
 
@@ -109,21 +105,6 @@ export default function DinoFeeder({
     }
 
     const remainingSpins = Math.max(0, Number(result?.remainingSpins) || 0);
-
-    if (batchSpinRef.current > 0) {
-      const nextBatch = Math.max(0, batchSpinRef.current - 1);
-      batchSpinRef.current = nextBatch;
-      setBatchSpinsRemaining(nextBatch);
-
-      if (nextBatch > 0 && remainingSpins > 0) {
-        window.setTimeout(() => {
-          if (batchSpinRef.current > 0) {
-            void spinWheelNow({ autoTriggered: true, fastMode: true, batchTriggered: true });
-          }
-        }, 180);
-        return;
-      }
-    }
 
     if (autoSpinRef.current && remainingSpins > 0) {
       window.setTimeout(() => {
@@ -137,12 +118,12 @@ export default function DinoFeeder({
     stopSpinModes();
   }
 
-  async function spinWheelNow({ autoTriggered = false, fastMode = false, batchTriggered = false } = {}) {
+  async function spinWheelNow({ autoTriggered = false, fastMode = false, spinMultiplier = 1 } = {}) {
     if (!canSpin) {
       if (displayedSpins <= 0) {
         setError(t("fortune.needSpin", {}, "You need at least one spin to use the wheel."));
       }
-      if (autoTriggered || batchTriggered) {
+      if (autoTriggered) {
         stopSpinModes();
       }
       return;
@@ -155,7 +136,7 @@ export default function DinoFeeder({
     setSpinDurationMs(nextDuration);
 
     try {
-      const result = await onSpin();
+      const result = await onSpin({ multiplier: spinMultiplier });
       const resultIndex = Math.max(0, segments.findIndex((segment) => segment.id === result?.rewardId));
       const targetOffset = (resultIndex * segmentAngle) + (segmentAngle / 2);
       const desiredNormalizedRotation = ((360 - targetOffset) % 360 + 360) % 360;
@@ -199,10 +180,8 @@ export default function DinoFeeder({
     }
 
     stopSpinModes();
-    batchSpinRef.current = 10;
-    setBatchSpinsRemaining(10);
     setError("");
-    void spinWheelNow({ autoTriggered: true, fastMode: true, batchTriggered: true });
+    void spinWheelNow({ fastMode: true, spinMultiplier: 10 });
   }
 
   function handleAutoToggle() {
@@ -216,8 +195,6 @@ export default function DinoFeeder({
       return;
     }
 
-    batchSpinRef.current = 0;
-    setBatchSpinsRemaining(0);
     autoSpinRef.current = true;
     setAutoSpin(true);
     setError("");
@@ -234,8 +211,6 @@ export default function DinoFeeder({
       suppressClickRef.current = true;
       autoSpinRef.current = true;
       setAutoSpin(true);
-      batchSpinRef.current = 0;
-      setBatchSpinsRemaining(0);
       void spinWheelNow({ autoTriggered: true, fastMode: true });
     }, 2000);
   }
@@ -248,12 +223,10 @@ export default function DinoFeeder({
     ? t("fortune.buttonSpinning", {}, "Spinning...")
     : t("fortune.buttonSpin", { count: displayedSpins }, `Spin the wheel (${displayedSpins})`);
 
-  const helperLabel = batchSpinsRemaining > 0
-    ? t("fortune.helperBatch", { count: batchSpinsRemaining }, `x10 batch in progress. ${batchSpinsRemaining} fast spins left.`)
-    : autoSpin
+  const helperLabel = autoSpin
       ? t("fortune.helperAuto", {}, "Auto spin stays on until your spins run out or a big bonus interrupts it.")
       : displayedSpins > 10
-        ? t("fortune.helperButtons", {}, "Use x10 for a quick batch, or Auto Spin to keep rolling until something big interrupts it.")
+        ? t("fortune.helperButtons", {}, "Use x10 for one boosted spin worth ten spins, or Auto Spin to keep rolling until something big interrupts it.")
         : t("fortune.helperLocked", {}, "Collect more than 10 spins to unlock auto spin.");
 
   return (
@@ -323,7 +296,7 @@ export default function DinoFeeder({
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
             onPointerCancel={handlePointerUp}
-            disabled={spinning || isBusy || displayedSpins <= 0 || autoSpin || batchSpinsRemaining > 0}
+            disabled={spinning || isBusy || displayedSpins <= 0 || autoSpin}
             style={{
               padding: "12px 18px",
               borderRadius: 14,
@@ -340,12 +313,12 @@ export default function DinoFeeder({
           </button>
           <button
             onClick={handleSpinTen}
-            disabled={spinning || isBusy || displayedSpins < 10 || autoSpin || batchSpinsRemaining > 0}
+            disabled={spinning || isBusy || displayedSpins < 10 || autoSpin}
             style={{
               padding: "12px 14px",
               borderRadius: 14,
               border: "none",
-              background: batchSpinsRemaining > 0 ? "linear-gradient(180deg,#f59e0b,#fb7185)" : (displayedSpins >= 10 ? "linear-gradient(180deg,#fcd34d,#f59e0b)" : "#334155"),
+              background: displayedSpins >= 10 ? "linear-gradient(180deg,#fcd34d,#f59e0b)" : "#334155",
               color: displayedSpins >= 10 ? "#2b1704" : "#94a3b8",
               fontWeight: 900,
               fontSize: 15,
@@ -353,13 +326,11 @@ export default function DinoFeeder({
               boxShadow: displayedSpins >= 10 ? "0 14px 24px rgba(245,158,11,0.24)" : "none"
             }}
           >
-            {batchSpinsRemaining > 0
-              ? t("fortune.buttonTenSpinning", { count: batchSpinsRemaining }, `x10 (${batchSpinsRemaining})`)
-              : t("fortune.buttonSpinTen", {}, "Spin x10")}
+            {t("fortune.buttonSpinTen", {}, "Spin x10")}
           </button>
           <button
             onClick={handleAutoToggle}
-            disabled={isBusy || batchSpinsRemaining > 0 || (!autoSpin && (spinning || displayedSpins <= 10))}
+            disabled={isBusy || (!autoSpin && (spinning || displayedSpins <= 10))}
             style={{
               padding: "12px 14px",
               borderRadius: 14,
@@ -376,7 +347,7 @@ export default function DinoFeeder({
           </button>
         </div>
 
-        <div style={{ color: autoSpin || batchSpinsRemaining > 0 ? "#fcd34d" : "#94a3b8", fontSize: 12, textAlign: "center" }}>
+        <div style={{ color: autoSpin ? "#fcd34d" : "#94a3b8", fontSize: 12, textAlign: "center" }}>
           {helperLabel}
         </div>
       </div>
