@@ -13,6 +13,7 @@ import {
 } from "../utils/gameApi";
 import { getTelegramAuthPayload, getTelegramViewerPreview, initTelegramChrome } from "../utils/telegram";
 import { formatCompactNumber } from "../../../shared/game-mechanics.mjs";
+import useCompactLayout from "../utils/useCompactLayout";
 
 function shouldLockForError(error) {
   const status = Number(error?.status || 0);
@@ -65,6 +66,8 @@ function formatGrantDelta(value, label) {
 }
 
 export default function AdminApp() {
+  const isMobile = useCompactLayout(900);
+  const isTablet = useCompactLayout(1280);
   const [token, setToken] = useState("");
   const [viewer, setViewer] = useState(() => getTelegramViewerPreview());
   const [status, setStatus] = useState("booting");
@@ -300,22 +303,55 @@ export default function AdminApp() {
   const collection = detail?.player?.collection || { entries: [], totalAttractiveness: 0, totalCount: 0, uniqueSpecies: 0 };
   const pass = detail?.player?.pass || null;
   const maxLanguageUsers = Math.max(1, ...languageStats.map((entry) => Number(entry.userCount || 0)));
+  const mainGridColumns = isMobile
+    ? "minmax(0, 1fr)"
+    : isTablet
+      ? "minmax(280px, 340px) minmax(0, 1fr)"
+      : "minmax(280px, 360px) minmax(0, 1fr) minmax(300px, 380px)";
+  const sectionCardStyle = {
+    padding: isMobile ? 12 : 14,
+    borderRadius: 14,
+    background: "rgba(255,255,255,0.04)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    display: "grid",
+    gap: isMobile ? 10 : 14,
+    alignContent: "start",
+    minWidth: 0
+  };
+  const statCardStyle = {
+    padding: isMobile ? 9 : 10,
+    borderRadius: 10,
+    background: "rgba(255,255,255,0.03)",
+    minWidth: 0,
+    wordBreak: "break-word"
+  };
+  const pillButtonStyle = (background, color) => ({
+    padding: isMobile ? "10px 12px" : "10px 12px",
+    borderRadius: 10,
+    border: "none",
+    background,
+    color,
+    fontWeight: 800,
+    width: isMobile ? "100%" : undefined
+  });
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(180deg,#071033,#0f172a)", color: "white", padding: 16 }}>
-      <div style={{ maxWidth: 1500, margin: "0 auto", display: "grid", gap: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(180deg,#071033,#0f172a)", color: "white", padding: isMobile ? 10 : 16 }}>
+      <div style={{ maxWidth: 1500, margin: "0 auto", display: "grid", gap: isMobile ? 12 : 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "center", gap: 12, flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
           <div>
-            <div style={{ fontSize: 28, fontWeight: 900 }}>Dino Admin Panel</div>
+            <div style={{ fontSize: isMobile ? 22 : 28, fontWeight: 900 }}>Dino Admin Panel</div>
             <div style={{ color: "#9CA3AF", fontSize: 14 }}>Signed in as @{viewer?.username || viewer?.firstName || viewer?.id || "admin"}</div>
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search player" style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.04)", color: "white", minWidth: 220 }} />
-            <button onClick={() => void loadPlayers(search)} style={{ padding: "10px 12px", borderRadius: 10, border: "none", background: "#06b6d4", color: "#04232b", fontWeight: 800 }}>Search</button>
-            <button onClick={() => void loadLeaderboard()} style={{ padding: "10px 12px", borderRadius: 10, border: "none", background: "#8b5cf6", color: "#ede9fe", fontWeight: 800 }}>Refresh ranking</button>
-            <button onClick={() => void loadSuspiciousClickers()} style={{ padding: "10px 12px", borderRadius: 10, border: "none", background: "#ef4444", color: "#fff1f2", fontWeight: 800 }}>Refresh bot watch</button>
-            <button onClick={() => void loadAudit()} style={{ padding: "10px 12px", borderRadius: 10, border: "none", background: "#f59e0b", color: "#1f2937", fontWeight: 800 }}>Refresh audit</button>
-            <button onClick={() => void loadLanguageStats()} style={{ padding: "10px 12px", borderRadius: 10, border: "none", background: "#6366f1", color: "#eef2ff", fontWeight: 800 }}>Refresh languages</button>
+          <div style={{ display: "grid", gap: 8, width: isMobile ? "100%" : "auto", gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "repeat(auto-fit, minmax(160px, max-content))" }}>
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search player" style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.04)", color: "white", minWidth: isMobile ? 0 : 220, width: "100%" }} />
+            <div style={{ display: "grid", gap: 8, gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "repeat(auto-fit, minmax(160px, 1fr))" }}>
+              <button onClick={() => void loadPlayers(search)} style={pillButtonStyle("#06b6d4", "#04232b")}>Search</button>
+              <button onClick={() => void loadLeaderboard()} style={pillButtonStyle("#8b5cf6", "#ede9fe")}>Refresh ranking</button>
+              <button onClick={() => void loadSuspiciousClickers()} style={pillButtonStyle("#ef4444", "#fff1f2")}>Refresh bot watch</button>
+              <button onClick={() => void loadAudit()} style={pillButtonStyle("#f59e0b", "#1f2937")}>Refresh audit</button>
+              <button onClick={() => void loadLanguageStats()} style={pillButtonStyle("#6366f1", "#eef2ff")}>Refresh languages</button>
+            </div>
           </div>
         </div>
 
@@ -325,11 +361,11 @@ export default function AdminApp() {
           </div>
         ) : null}
 
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 360px) minmax(0, 1fr) minmax(300px, 380px)", gap: 16 }}>
-          <section style={{ padding: 14, borderRadius: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "grid", gap: 10, alignContent: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: mainGridColumns, gap: isMobile ? 12 : 16 }}>
+          <section style={{ ...sectionCardStyle, gap: 10 }}>
             <div style={{ fontSize: 18, fontWeight: 800 }}>Players</div>
             {players.map((player) => (
-              <button key={player.telegramUserId} onClick={() => void loadPlayerDetail(player.telegramUserId)} style={{ textAlign: "left", padding: 12, borderRadius: 10, border: selectedPlayerId === player.telegramUserId ? "1px solid #2dd4bf" : player.isSuspiciousClicker ? "1px solid rgba(248,113,113,0.45)" : "1px solid rgba(255,255,255,0.08)", background: selectedPlayerId === player.telegramUserId ? "rgba(45,212,191,0.14)" : player.isSuspiciousClicker ? "rgba(248,113,113,0.08)" : "rgba(255,255,255,0.03)", color: "white" }}>
+              <button key={player.telegramUserId} onClick={() => void loadPlayerDetail(player.telegramUserId)} style={{ textAlign: "left", padding: 12, borderRadius: 10, border: selectedPlayerId === player.telegramUserId ? "1px solid #2dd4bf" : player.isSuspiciousClicker ? "1px solid rgba(248,113,113,0.45)" : "1px solid rgba(255,255,255,0.08)", background: selectedPlayerId === player.telegramUserId ? "rgba(45,212,191,0.14)" : player.isSuspiciousClicker ? "rgba(248,113,113,0.08)" : "rgba(255,255,255,0.03)", color: "white", minWidth: 0, wordBreak: "break-word" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
                   <div style={{ fontWeight: 800 }}>{player.firstName || player.username || player.telegramUserId}</div>
                   {player.isSuspiciousClicker ? <span style={suspiciousBadgeStyle()}>BOT WATCH</span> : null}
@@ -343,46 +379,46 @@ export default function AdminApp() {
             {!players.length ? <div style={{ color: "#9CA3AF" }}>No players found.</div> : null}
           </section>
 
-          <section style={{ padding: 14, borderRadius: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "grid", gap: 14, alignContent: "start" }}>
+          <section style={{ ...sectionCardStyle, order: isMobile ? 2 : undefined }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
               <div style={{ fontSize: 18, fontWeight: 800 }}>Player Detail</div>
               {antiCheat.isSuspiciousClicker ? <span style={suspiciousBadgeStyle()}>BOT WATCH</span> : null}
             </div>
             {detail?.player ? (
               <>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Meat<br /><strong>{formatCompactNumber(detail.player.state.meat || 0)}</strong></div>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Gems<br /><strong>{formatCompactNumber(detail.player.state.gems || 0)}</strong></div>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Ferns<br /><strong>{detail.player.state.ferns || 0}</strong></div>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Free Spins<br /><strong>{detail.player.state.freeSpins || 0}</strong></div>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Fortune Points<br /><strong>{detail.player.state.fortunePoints || 0}</strong></div>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Language<br /><strong>{String(detail.player.telegramUser?.languageCode || "unknown").toUpperCase()}</strong></div>
+                <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? 120 : 150}px, 1fr))`, gap: 10 }}>
+                  <div style={statCardStyle}>Meat<br /><strong>{formatCompactNumber(detail.player.state.meat || 0)}</strong></div>
+                  <div style={statCardStyle}>Gems<br /><strong>{formatCompactNumber(detail.player.state.gems || 0)}</strong></div>
+                  <div style={statCardStyle}>Ferns<br /><strong>{detail.player.state.ferns || 0}</strong></div>
+                  <div style={statCardStyle}>Free Spins<br /><strong>{detail.player.state.freeSpins || 0}</strong></div>
+                  <div style={statCardStyle}>Fortune Points<br /><strong>{detail.player.state.fortunePoints || 0}</strong></div>
+                  <div style={statCardStyle}>Language<br /><strong>{String(detail.player.telegramUser?.languageCode || "unknown").toUpperCase()}</strong></div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Total attractiveness<br /><strong>{formatCompactNumber(collection.totalAttractiveness || 0)}</strong></div>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Total dinos<br /><strong>{collection.totalCount || 0}</strong></div>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Species<br /><strong>{collection.uniqueSpecies || 0}</strong></div>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Pass level<br /><strong>{pass?.currentLevel || 1}</strong></div>
+                <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? 135 : 180}px, 1fr))`, gap: 10 }}>
+                  <div style={statCardStyle}>Total attractiveness<br /><strong>{formatCompactNumber(collection.totalAttractiveness || 0)}</strong></div>
+                  <div style={statCardStyle}>Total dinos<br /><strong>{collection.totalCount || 0}</strong></div>
+                  <div style={statCardStyle}>Species<br /><strong>{collection.uniqueSpecies || 0}</strong></div>
+                  <div style={statCardStyle}>Pass level<br /><strong>{pass?.currentLevel || 1}</strong></div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Referral code<br /><strong>{referral?.code || "-"}</strong></div>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Successful invites<br /><strong>{referralStats.successfulInvites || 0}</strong></div>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Referral commission<br /><strong>{formatCompactNumber(referral?.totalCommissionMeat || 0)} meat</strong></div>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Referred by code<br /><strong>{referral?.referredByCode || "-"}</strong></div>
+                <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? 135 : 180}px, 1fr))`, gap: 10 }}>
+                  <div style={statCardStyle}>Referral code<br /><strong>{referral?.code || "-"}</strong></div>
+                  <div style={statCardStyle}>Successful invites<br /><strong>{referralStats.successfulInvites || 0}</strong></div>
+                  <div style={statCardStyle}>Referral commission<br /><strong>{formatCompactNumber(referral?.totalCommissionMeat || 0)} meat</strong></div>
+                  <div style={statCardStyle}>Referred by code<br /><strong>{referral?.referredByCode || "-"}</strong></div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-                  <div style={{ padding: 10, borderRadius: 10, background: antiCheat.isSuspiciousClicker ? "rgba(248,113,113,0.10)" : "rgba(255,255,255,0.03)", border: antiCheat.isSuspiciousClicker ? "1px solid rgba(248,113,113,0.35)" : "1px solid transparent" }}>Continuous click chain<br /><strong>{antiCheat.currentContinuousClickMinutes || 0} min</strong></div>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Flagged at<br /><strong>{antiCheat.flaggedAt || "not flagged"}</strong></div>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Last click<br /><strong>{antiCheat.lastClickAt || "-"}</strong></div>
-                  <div style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>Claimed milestones<br /><strong>{(referralStats.claimedMilestones || []).join(", ") || "none"}</strong></div>
+                <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? 135 : 180}px, 1fr))`, gap: 10 }}>
+                  <div style={{ ...statCardStyle, background: antiCheat.isSuspiciousClicker ? "rgba(248,113,113,0.10)" : "rgba(255,255,255,0.03)", border: antiCheat.isSuspiciousClicker ? "1px solid rgba(248,113,113,0.35)" : "1px solid transparent" }}>Continuous click chain<br /><strong>{antiCheat.currentContinuousClickMinutes || 0} min</strong></div>
+                  <div style={statCardStyle}>Flagged at<br /><strong>{antiCheat.flaggedAt || "not flagged"}</strong></div>
+                  <div style={statCardStyle}>Last click<br /><strong>{antiCheat.lastClickAt || "-"}</strong></div>
+                  <div style={statCardStyle}>Claimed milestones<br /><strong>{(referralStats.claimedMilestones || []).join(", ") || "none"}</strong></div>
                 </div>
 
                 <form onSubmit={submitGrant} style={{ display: "grid", gap: 8 }}>
                   <div style={{ fontWeight: 700 }}>Adjust resources</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))", gap: 8 }}>
                     <input value={grantForm.meat} onChange={(event) => setGrantForm((current) => ({ ...current, meat: event.target.value }))} placeholder="Meat delta" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.04)", color: "white" }} />
                     <input value={grantForm.gems} onChange={(event) => setGrantForm((current) => ({ ...current, gems: event.target.value }))} placeholder="Gems delta" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.04)", color: "white" }} />
                     <input value={grantForm.ferns} onChange={(event) => setGrantForm((current) => ({ ...current, ferns: event.target.value }))} placeholder="Ferns delta" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.04)", color: "white" }} />
@@ -390,19 +426,19 @@ export default function AdminApp() {
                     <input value={grantForm.fortunePoints} onChange={(event) => setGrantForm((current) => ({ ...current, fortunePoints: event.target.value }))} placeholder="Fortune points delta" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.04)", color: "white" }} />
                   </div>
                   <input value={grantForm.reason} onChange={(event) => setGrantForm((current) => ({ ...current, reason: event.target.value }))} placeholder="Reason" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.04)", color: "white" }} />
-                  <button type="submit" disabled={busyAction === "grant"} style={{ padding: "10px 12px", borderRadius: 10, border: "none", background: "#22c55e", color: "#052e16", fontWeight: 800 }}>Apply adjustment</button>
+                  <button type="submit" disabled={busyAction === "grant"} style={pillButtonStyle("#22c55e", "#052e16")}>Apply adjustment</button>
                 </form>
 
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button onClick={() => void resetScope("wallet")} style={{ padding: "10px 12px", borderRadius: 10, border: "none", background: "#f59e0b", color: "#1f2937", fontWeight: 800 }}>Reset wallet</button>
-                  <button onClick={() => void resetScope("quests")} style={{ padding: "10px 12px", borderRadius: 10, border: "none", background: "#38bdf8", color: "#082f49", fontWeight: 800 }}>Reset quests</button>
-                  <button onClick={() => void resetScope("all")} style={{ padding: "10px 12px", borderRadius: 10, border: "none", background: "#ef4444", color: "#450a0a", fontWeight: 800 }}>Full reset</button>
+                <div style={{ display: "grid", gap: 8, gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "repeat(auto-fit, minmax(160px, 1fr))" }}>
+                  <button onClick={() => void resetScope("wallet")} style={pillButtonStyle("#f59e0b", "#1f2937")}>Reset wallet</button>
+                  <button onClick={() => void resetScope("quests")} style={pillButtonStyle("#38bdf8", "#082f49")}>Reset quests</button>
+                  <button onClick={() => void resetScope("all")} style={pillButtonStyle("#ef4444", "#450a0a")}>Full reset</button>
                 </div>
 
                 <div style={{ display: "grid", gap: 8 }}>
                   <div style={{ fontWeight: 700 }}>Referred players</div>
                   {(detail.referredPlayers || []).length ? detail.referredPlayers.map((entry) => (
-                    <div key={entry.telegramUserId} style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>
+                    <div key={entry.telegramUserId} style={{ ...statCardStyle, padding: 10 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
                         <div>{entry.firstName || entry.username || entry.telegramUserId}</div>
                         <div style={{ color: "#34d399", fontWeight: 700 }}>{formatCompactNumber(entry.commissionMeat || 0)} meat</div>
@@ -416,7 +452,7 @@ export default function AdminApp() {
                 <div style={{ display: "grid", gap: 8 }}>
                   <div style={{ fontWeight: 700 }}>Sanctuary roster</div>
                   {(collection.entries || []).length ? collection.entries.slice(0, 10).map((entry) => (
-                    <div key={entry.id} style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>
+                    <div key={entry.id} style={{ ...statCardStyle, padding: 10 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
                         <div>
                           <div style={{ fontWeight: 800 }}>{entry.name}</div>
@@ -431,7 +467,7 @@ export default function AdminApp() {
                 <div style={{ display: "grid", gap: 8 }}>
                   <div style={{ fontWeight: 700 }}>Recent payments</div>
                   {(detail.payments || []).map((payment) => (
-                    <div key={payment.paymentId} style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>
+                    <div key={payment.paymentId} style={{ ...statCardStyle, padding: 10 }}>
                       <div>{payment.productId}</div>
                       <div style={{ color: "#9CA3AF", fontSize: 13 }}>{payment.status} | {payment.starsPrice} Stars | {payment.rewardAmount} {payment.rewardType}</div>
                     </div>
@@ -441,7 +477,7 @@ export default function AdminApp() {
                 <div style={{ display: "grid", gap: 8 }}>
                   <div style={{ fontWeight: 700 }}>Recent transactions</div>
                   {(detail.transactions || []).slice(0, 12).map((entry) => (
-                    <div key={entry.transactionId} style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>
+                    <div key={entry.transactionId} style={{ ...statCardStyle, padding: 10 }}>
                       <div>{entry.type}</div>
                       <div style={{ color: "#9CA3AF", fontSize: 13 }}>
                         {entry.createdAt} | Meat {formatCompactNumber(entry.meat || 0)} | Gems {formatCompactNumber(entry.gems || 0)} | Ferns {entry.ferns || 0}
@@ -455,14 +491,14 @@ export default function AdminApp() {
             )}
           </section>
 
-          <section style={{ display: "grid", gap: 16, alignContent: "start" }}>
-            <div style={{ padding: 14, borderRadius: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "grid", gap: 10 }}>
+          <section style={{ display: "grid", gap: isMobile ? 12 : 16, alignContent: "start", gridColumn: isTablet && !isMobile ? "1 / -1" : undefined, order: isMobile ? 3 : undefined }}>
+            <div style={{ ...sectionCardStyle, gap: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
                 <div style={{ fontSize: 18, fontWeight: 800 }}>Bot Watch</div>
                 <div style={{ color: "#9CA3AF", fontSize: 12 }}>{suspiciousPlayers.length} flagged</div>
               </div>
               {suspiciousPlayers.map((entry) => (
-                <button key={entry.telegramUserId} onClick={() => void loadPlayerDetail(entry.telegramUserId)} style={{ textAlign: "left", padding: 10, borderRadius: 10, border: "1px solid rgba(248,113,113,0.35)", background: "rgba(248,113,113,0.08)", color: "white" }}>
+                <button key={entry.telegramUserId} onClick={() => void loadPlayerDetail(entry.telegramUserId)} style={{ textAlign: "left", padding: 10, borderRadius: 10, border: "1px solid rgba(248,113,113,0.35)", background: "rgba(248,113,113,0.08)", color: "white", minWidth: 0, wordBreak: "break-word" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
                     <strong>{entry.firstName || entry.username || entry.telegramUserId}</strong>
                     <span style={suspiciousBadgeStyle()}>BOT WATCH</span>
@@ -474,10 +510,10 @@ export default function AdminApp() {
               {!suspiciousPlayers.length ? <div style={{ color: "#9CA3AF" }}>No players have crossed the 35 minute continuous click threshold.</div> : null}
             </div>
 
-            <div style={{ padding: 14, borderRadius: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "grid", gap: 10 }}>
+            <div style={{ ...sectionCardStyle, gap: 10 }}>
               <div style={{ fontSize: 18, fontWeight: 800 }}>Leaderboard</div>
               {leaderboard.map((entry) => (
-                <button key={entry.telegramUserId} onClick={() => void loadPlayerDetail(entry.telegramUserId)} style={{ textAlign: "left", padding: 10, borderRadius: 10, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)", color: "white" }}>
+                <button key={entry.telegramUserId} onClick={() => void loadPlayerDetail(entry.telegramUserId)} style={{ textAlign: "left", padding: 10, borderRadius: 10, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)", color: "white", minWidth: 0, wordBreak: "break-word" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                     <strong>#{entry.rank} {entry.firstName || entry.username || entry.telegramUserId}</strong>
                     <span style={{ color: "#fbbf24" }}>{formatCompactNumber(entry.productionPerSec || 0)}/s</span>
@@ -488,7 +524,7 @@ export default function AdminApp() {
               {!leaderboard.length ? <div style={{ color: "#9CA3AF" }}>Leaderboard is empty.</div> : null}
             </div>
 
-            <div style={{ padding: 14, borderRadius: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "grid", gap: 12 }}>
+            <div style={{ ...sectionCardStyle, gap: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
                 <div style={{ fontSize: 18, fontWeight: 800 }}>Languages</div>
                 <div style={{ color: "#9CA3AF", fontSize: 12 }}>{languageStats.reduce((sum, entry) => sum + Number(entry.userCount || 0), 0)} users</div>
@@ -507,10 +543,10 @@ export default function AdminApp() {
               {!languageStats.length ? <div style={{ color: "#9CA3AF" }}>No language data yet.</div> : null}
             </div>
 
-            <div style={{ padding: 14, borderRadius: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", display: "grid", gap: 10, alignContent: "start" }}>
+            <div style={{ ...sectionCardStyle, gap: 10 }}>
               <div style={{ fontSize: 18, fontWeight: 800 }}>Audit Log</div>
               {auditEntries.map((entry) => (
-                <div key={entry.auditId} style={{ padding: 10, borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>
+                <div key={entry.auditId} style={{ ...statCardStyle, padding: 10 }}>
                   <div style={{ fontWeight: 700 }}>{entry.action}</div>
                   <div style={{ color: "#9CA3AF", fontSize: 13 }}>Admin {entry.adminTelegramUserId} to Player {entry.targetTelegramUserId}</div>
                   <div style={{ color: "#9CA3AF", fontSize: 12 }}>{entry.createdAt}</div>
