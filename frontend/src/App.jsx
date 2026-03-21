@@ -77,7 +77,19 @@ import {
 const REFRESH_INTERVAL_MS = 30000;
 const QUEST_MEAT_REWARD_SECONDS = 5 * 60;
 const ADMIN_URL = `${import.meta.env.BASE_URL || "/"}admin.html`;
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const GITHUB_PAGES_API_BASE_URL = "https://cyberdinoclicker.onrender.com";
+const API_BASE_URL = (() => {
+  const explicitBaseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+  if (explicitBaseUrl) return explicitBaseUrl;
+
+  try {
+    if (typeof window !== "undefined" && /\.github\.io$/i.test(window.location.hostname || "")) {
+      return GITHUB_PAGES_API_BASE_URL;
+    }
+  } catch {}
+
+  return "";
+})();
 const RESOURCE_ICONS = {
   meat: `${import.meta.env.BASE_URL || "/"}ui/icon-meat.png`,
   ferns: `${import.meta.env.BASE_URL || "/"}ui/icon-ferns.png`,
