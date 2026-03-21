@@ -1044,6 +1044,13 @@ export default function App() {
 
   const state = player?.state;
   const derived = player?.derived;
+  const effectiveHeaderAttractiveness = Math.max(
+    0,
+    Math.round(
+      (Number(derived?.totalAttractiveness || 0) || 0)
+      * Math.max(0.25, Number(derived?.ticketAttractivenessMultiplier || 1) || 1)
+    )
+  );
   const rawProducts = player?.products || [];
   const rawCollection = player?.collection || { entries: [] };
   const profileStats = player?.profileStats || {};
@@ -1301,7 +1308,7 @@ export default function App() {
             </div>
             <div style={styles.resourceChip} title={t("resource.charm", {}, "Attractiveness")}>
               <div style={{ ...styles.resourceIcon, backgroundImage: `url(${RESOURCE_ICONS.charm})` }} />
-              <div style={styles.resourceValueCompact}>{formatCompactNumber(derived?.totalAttractiveness || 0)}</div>
+              <div style={styles.resourceValueCompact}>{formatCompactNumber(effectiveHeaderAttractiveness)}</div>
             </div>
           </div>
         </div>

@@ -175,8 +175,21 @@ export default function PassDrawer({
                   : topEraText}
               </div>
             </div>
-            <button onClick={onClose} style={{ border: "none", background: "transparent", color: "#9ca3af", fontSize: 18, cursor: "pointer" }}>
-              x
+            <button
+              onClick={onClose}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 14,
+                border: "1px solid rgba(148,163,184,0.2)",
+                background: "rgba(15,23,42,0.42)",
+                color: "#e2e8f0",
+                fontSize: 28,
+                lineHeight: 1,
+                cursor: "pointer"
+              }}
+            >
+              ×
             </button>
           </div>
 

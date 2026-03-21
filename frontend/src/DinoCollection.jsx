@@ -510,7 +510,22 @@ function DetailModal({ entry, fmt, onClose, compact = false }) {
             </div>
             <div style={{ marginTop: 6, color: "#cbd5e1", maxWidth: 720 }}>{entry.blurb || tt("zoo.detailCard", {}, "Detailed sanctuary card")}</div>
           </div>
-          <button onClick={onClose} style={{ border: "none", background: "transparent", color: "#64748b", fontSize: 18, cursor: "pointer" }}>x</button>
+          <button
+            onClick={onClose}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 14,
+              border: "1px solid rgba(148,163,184,0.24)",
+              background: "rgba(15,23,42,0.42)",
+              color: "#e2e8f0",
+              fontSize: 28,
+              lineHeight: 1,
+              cursor: "pointer"
+            }}
+          >
+            ×
+          </button>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 150px), 1fr))", gap: 10 }}>
@@ -844,11 +859,17 @@ function LaboratoryTab({ laboratory, gems, labCatalog, onBuyLaboratory, onUnlock
     </div>
   );
 }
-function BreedingTab({ naturalEntries, onBreed, busyAction }) {
+function BreedingTab({ naturalEntries, laboratory, onBreed, onHatchEgg, busyAction }) {
   const motherOptions = naturalEntries.filter((entry) => (entry.femaleCount || 0) > 0);
   const fatherOptions = naturalEntries.filter((entry) => (entry.maleCount || 0) > 0);
   const [motherId, setMotherId] = useState(motherOptions[0]?.id || "");
   const [fatherId, setFatherId] = useState(fatherOptions[0]?.id || "");
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!motherOptions.some((entry) => entry.id === motherId)) {
@@ -865,6 +886,9 @@ function BreedingTab({ naturalEntries, onBreed, busyAction }) {
   const mother = motherOptions.find((entry) => entry.id === motherId) || null;
   const father = fatherOptions.find((entry) => entry.id === fatherId) || null;
   const cost = mother && father ? getBreedingCost(mother.id, father.id) : 0;
+  const breedingEggProjects = Array.isArray(laboratory?.eggProjects)
+    ? laboratory.eggProjects.filter((project) => project?.source === "breeding")
+    : [];
 
   return (
     <div style={{ display: "grid", gap: 18 }}>
@@ -910,6 +934,102 @@ function BreedingTab({ naturalEntries, onBreed, busyAction }) {
           <button onClick={() => mother && father && onBreed(mother.id, father.id)} disabled={!mother || !father || busyAction === `breed:${motherId}:${fatherId}`} style={{ padding: "14px 16px", borderRadius: 16, border: "none", background: "linear-gradient(180deg,#d97706,#92400e)", color: "#1f2937", fontWeight: 900, cursor: "pointer" }}>
             {busyAction === `breed:${motherId}:${fatherId}` ? tt("zoo.creatingBreedingEgg", {}, "Creating breeding egg...") : tt("zoo.createBreedingEgg", {}, "Create breeding egg")}
           </button>
+
+          <section style={{ display: "grid", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 900, color: "#bfdbfe" }}>{tt("zoo.breedingEggQueue", {}, "Breeding eggs")}</div>
+              <div style={{ marginTop: 4, color: "#cbd5e1", fontSize: 13 }}>
+                {tt("zoo.breedingEggsHelp", {}, "Every egg created here keeps growing in this tab too, so you can see exactly how long is left until it hatches.")}
+              </div>
+            </div>
+
+            {!breedingEggProjects.length ? (
+              <div style={{ padding: 18, borderRadius: 22, background: "rgba(30,41,59,0.82)", border: "1px solid rgba(129,144,168,0.34)", color: "#cbd5e1" }}>
+                {tt("zoo.noBreedingEggsYet", {}, "No breeding eggs yet. Create one above and it will appear here instantly.")}
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {breedingEggProjects.map((project, index) => {
+                  const incubation = getEggIncubationMeta(project, nowMs);
+                  const hatchReady = incubation.ready;
+                  const hatchBusy = busyAction === `hatch:${project.id}`;
+                  return (
+                    <article
+                      key={project.id}
+                      style={{
+                        padding: 16,
+                        borderRadius: 20,
+                        background: cardGradient(index + 1),
+                        border: "1px solid rgba(132,147,170,0.36)",
+                        display: "grid",
+                        gap: 12
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}>
+                        <div>
+                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                            <div style={{ fontSize: 18, fontWeight: 900, color: "#f8fafc" }}>{project.displayName}</div>
+                            <SexBadge sex={project.sex} />
+                            {project.hybrid ? <TraitBadge label={tt("zoo.hybridEgg", {}, "Hybrid egg")} tone="#ddd6fe" /> : null}
+                          </div>
+                          <div style={{ marginTop: 4, color: "#cbd5e1", fontSize: 12 }}>
+                            {tt("zoo.opensInLab", {}, "You can still modify this egg in Laboratory if you want extra genes.")}
+                          </div>
+                        </div>
+                        <div style={{ width: 66, height: 66, borderRadius: 18, background: "rgba(15,23,42,0.42)", display: "grid", placeItems: "center" }}>
+                          <img
+                            src={smallImage(project.iconId || project.speciesId)}
+                            alt={project.displayName}
+                            style={{ width: "100%", maxHeight: 56, objectFit: "contain" }}
+                            onError={(event) => {
+                              event.currentTarget.onerror = null;
+                              event.currentTarget.src = smallImage("basic");
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ display: "grid", gap: 6 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, color: "#cbd5e1", fontSize: 12 }}>
+                          <span>{hatchReady ? tt("zoo.readyToHatchHere", {}, "Ready to hatch") : tt("zoo.incubatingFor", { time: formatAge(incubation.incubationDurationSeconds) }, `Egg warms up for ${formatAge(incubation.incubationDurationSeconds)}`)}</span>
+                          <strong style={{ color: hatchReady ? "#86efac" : "#bfdbfe" }}>{Math.round(incubation.progressPercent)}%</strong>
+                        </div>
+                        <div style={{ height: 10, borderRadius: 999, background: "rgba(255,255,255,0.12)", overflow: "hidden" }}>
+                          <div style={{ width: `${hatchReady ? 100 : Math.max(4, Math.round(incubation.progressPercent))}%`, height: "100%", borderRadius: 999, background: hatchReady ? "linear-gradient(90deg,#22c55e,#14b8a6)" : "linear-gradient(90deg,#60a5fa,#8b5cf6)" }} />
+                        </div>
+                        <div style={{ color: hatchReady ? "#bbf7d0" : "#cbd5e1", fontSize: 12 }}>
+                          {hatchReady ? tt("zoo.hatcheryCanOpen", {}, "The hatchery can open this egg now.") : tt("zoo.timeLeft", { time: formatAge(incubation.remainingSeconds) }, `Time left: ${formatAge(incubation.remainingSeconds)}`)}
+                        </div>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
+                        <div style={miniStatStyle}><span>{tt("zoo.genesCount", { count: project.traitProfile?.totalGenes || 0 }, `${project.traitProfile?.totalGenes || 0} genes`)}</span><strong>{project.traitProfile?.totalGenes || 0}</strong></div>
+                        <div style={miniStatStyle}><span>{tt("zoo.genotypesCount", { count: project.traitProfile?.totalGenotypes || 0 }, `${project.traitProfile?.totalGenotypes || 0} genotypes`)}</span><strong>{project.traitProfile?.totalGenotypes || 0}</strong></div>
+                      </div>
+
+                      {laboratory?.hatcheryUnlocked ? (
+                        <button
+                          onClick={() => onHatchEgg(project.id)}
+                          disabled={!hatchReady || hatchBusy}
+                          style={{
+                            padding: "12px 14px",
+                            borderRadius: 14,
+                            border: "none",
+                            background: hatchReady ? "linear-gradient(180deg,#22c55e,#15803d)" : "#475569",
+                            color: hatchReady ? "#052e16" : "#cbd5e1",
+                            fontWeight: 900,
+                            cursor: hatchReady ? "pointer" : "not-allowed"
+                          }}
+                        >
+                          {hatchBusy ? tt("zoo.hatching", {}, "Hatching...") : hatchReady ? tt("zoo.hatchThisEgg", {}, "Hatch this egg") : tt("zoo.incubatingLeft", { time: formatAge(incubation.remainingSeconds) }, `Incubating... ${formatAge(incubation.remainingSeconds)} left`)}
+                        </button>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         </div>
       )}
     </div>
@@ -1366,7 +1486,15 @@ export default function DinoCollection({
           </div>
         ) : null}
 
-        {tab === "breeding" ? <BreedingTab naturalEntries={naturalEntries} onBreed={onBreed} busyAction={busyAction} /> : null}
+        {tab === "breeding" ? (
+          <BreedingTab
+            naturalEntries={naturalEntries}
+            laboratory={laboratory}
+            onBreed={onBreed}
+            onHatchEgg={onHatchEgg}
+            busyAction={busyAction}
+          />
+        ) : null}
         {tab === "laboratory" ? (
           <LaboratoryTab
             laboratory={laboratory}

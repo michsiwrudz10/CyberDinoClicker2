@@ -398,9 +398,9 @@ function buildPassXpRequirement(level) {
 }
 
 function buildPassReward(level, track = "free") {
-  const spins = Math.max(5, Math.floor(level * (track === "elite" ? 2.4 : 1.15)));
-  const meat = Math.max(3000, Math.floor(level * level * (track === "elite" ? 3200 : 1500)));
-  const ferns = Math.max(1, Math.floor(level / (track === "elite" ? 5 : 10)) + (track === "elite" ? 2 : 0));
+  const spins = Math.max(track === "elite" ? 10 : 6, Math.floor(level * (track === "elite" ? 3.4 : 1.65) + Math.floor(level / 6)));
+  const meat = Math.max(track === "elite" ? 9000 : 4500, Math.floor(level * level * (track === "elite" ? 5200 : 2400)));
+  const ferns = Math.max(track === "elite" ? 3 : 1, Math.floor(level / (track === "elite" ? 4 : 7)) + (track === "elite" ? 3 : 1));
 
   if (level % 10 === 0) return track === "elite" ? String(spins) + " spins + " + String(ferns) + " ferns" : String(ferns) + " ferns";
   if (level % 5 === 0) return track === "elite" ? meat.toLocaleString() + " meat" : String(spins) + " spins";

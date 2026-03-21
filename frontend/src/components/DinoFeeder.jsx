@@ -65,9 +65,12 @@ export default function DinoFeeder({
   const [error, setError] = useState("");
   const [rotation, setRotation] = useState(0);
   const [autoSpin, setAutoSpin] = useState(false);
+  const [batchSpinsRemaining, setBatchSpinsRemaining] = useState(0);
+  const [spinDurationMs, setSpinDurationMs] = useState(4200);
   const rotationRef = useRef(0);
   const longPressTimerRef = useRef(null);
   const autoSpinRef = useRef(false);
+  const batchSpinRef = useRef(0);
   const suppressClickRef = useRef(false);
 
   const displayedFreeSpins = typeof freeSpins === "number" ? freeSpins : 0;
@@ -90,40 +93,57 @@ export default function DinoFeeder({
     }
   }
 
-  function stopAutoSpin() {
+  function stopSpinModes() {
     autoSpinRef.current = false;
     setAutoSpin(false);
+    batchSpinRef.current = 0;
+    setBatchSpinsRemaining(0);
     clearLongPressTimer();
   }
 
   function queueNextAutoSpin(result) {
     if (result?.showFortuneBonus) {
-      stopAutoSpin();
+      stopSpinModes();
       onSpinResultShown(result);
       return;
     }
 
-    if (autoSpinRef.current && (Number(result?.remainingSpins) || 0) > 0) {
+    const remainingSpins = Math.max(0, Number(result?.remainingSpins) || 0);
+
+    if (batchSpinRef.current > 0) {
+      const nextBatch = Math.max(0, batchSpinRef.current - 1);
+      batchSpinRef.current = nextBatch;
+      setBatchSpinsRemaining(nextBatch);
+
+      if (nextBatch > 0 && remainingSpins > 0) {
+        window.setTimeout(() => {
+          if (batchSpinRef.current > 0) {
+            void spinWheelNow({ autoTriggered: true, fastMode: true, batchTriggered: true });
+          }
+        }, 180);
+        return;
+      }
+    }
+
+    if (autoSpinRef.current && remainingSpins > 0) {
       window.setTimeout(() => {
         if (autoSpinRef.current) {
-          void spinWheelNow({ autoTriggered: true });
+          void spinWheelNow({ autoTriggered: true, fastMode: true });
         }
       }, 220);
       return;
     }
 
-    if (autoSpinRef.current) {
-      stopAutoSpin();
-    }
+    stopSpinModes();
   }
 
-  async function spinWheelNow({ autoTriggered = false } = {}) {
+  async function spinWheelNow({ autoTriggered = false, fastMode = false, batchTriggered = false } = {}) {
     if (!canSpin) {
       if (displayedSpins <= 0) {
         setError(t("fortune.needSpin", {}, "You need at least one spin to use the wheel."));
       }
-      if (autoTriggered) {
-        stopAutoSpin();
+      if (autoTriggered || batchTriggered) {
+        stopSpinModes();
       }
       return;
     }
@@ -131,6 +151,8 @@ export default function DinoFeeder({
     setError("");
     setDisplayed(null);
     setSpinning(true);
+    const nextDuration = fastMode ? 1400 : 4200;
+    setSpinDurationMs(nextDuration);
 
     try {
       const result = await onSpin();
@@ -152,9 +174,9 @@ export default function DinoFeeder({
         setDisplayed(result || null);
         setSpinning(false);
         queueNextAutoSpin(result);
-      }, 4200);
+      }, nextDuration);
     } catch (spinError) {
-      stopAutoSpin();
+      stopSpinModes();
       setSpinning(false);
       setError(spinError instanceof Error ? spinError.message : t("error.actionFailed", {}, "Action failed."));
     }
@@ -166,12 +188,43 @@ export default function DinoFeeder({
       return;
     }
 
-    if (autoSpin && !spinning) {
-      stopAutoSpin();
+    void spinWheelNow();
+  }
+
+  function handleSpinTen() {
+    if (spinning || isBusy) return;
+    if (displayedSpins < 10) {
+      setError(t("fortune.needTenSpins", {}, "You need at least 10 spins to use x10."));
       return;
     }
 
-    void spinWheelNow();
+    stopSpinModes();
+    batchSpinRef.current = 10;
+    setBatchSpinsRemaining(10);
+    setError("");
+    void spinWheelNow({ autoTriggered: true, fastMode: true, batchTriggered: true });
+  }
+
+  function handleAutoToggle() {
+    if (autoSpin) {
+      stopSpinModes();
+      return;
+    }
+
+    if (displayedSpins <= 10) {
+      setError(t("fortune.needMoreThanTen", {}, "Collect more than 10 spins to unlock auto spin."));
+      return;
+    }
+
+    batchSpinRef.current = 0;
+    setBatchSpinsRemaining(0);
+    autoSpinRef.current = true;
+    setAutoSpin(true);
+    setError("");
+
+    if (!spinning) {
+      void spinWheelNow({ autoTriggered: true, fastMode: true });
+    }
   }
 
   function handlePointerDown() {
@@ -181,7 +234,9 @@ export default function DinoFeeder({
       suppressClickRef.current = true;
       autoSpinRef.current = true;
       setAutoSpin(true);
-      void spinWheelNow({ autoTriggered: true });
+      batchSpinRef.current = 0;
+      setBatchSpinsRemaining(0);
+      void spinWheelNow({ autoTriggered: true, fastMode: true });
     }, 2000);
   }
 
@@ -190,16 +245,16 @@ export default function DinoFeeder({
   }
 
   const buttonLabel = spinning
-    ? (autoSpin ? t("fortune.buttonAutoSpinning", {}, "Auto spinning...") : t("fortune.buttonSpinning", {}, "Spinning..."))
-    : autoSpin
-      ? t("fortune.buttonStopAuto", {}, "Stop auto spin")
-      : t("fortune.buttonSpin", { count: displayedSpins }, `Spin the wheel (${displayedSpins})`);
+    ? t("fortune.buttonSpinning", {}, "Spinning...")
+    : t("fortune.buttonSpin", { count: displayedSpins }, `Spin the wheel (${displayedSpins})`);
 
-  const helperLabel = autoSpin
-    ? t("fortune.helperAuto", {}, "Auto spin stays on until your spins run out or a big bonus interrupts it.")
-    : displayedSpins > 10
-      ? t("fortune.helperHold", {}, "Hold the button for 2 seconds to start auto spin.")
-      : t("fortune.helperLocked", {}, "Collect more than 10 spins to unlock auto spin.");
+  const helperLabel = batchSpinsRemaining > 0
+    ? t("fortune.helperBatch", { count: batchSpinsRemaining }, `x10 batch in progress. ${batchSpinsRemaining} fast spins left.`)
+    : autoSpin
+      ? t("fortune.helperAuto", {}, "Auto spin stays on until your spins run out or a big bonus interrupts it.")
+      : displayedSpins > 10
+        ? t("fortune.helperButtons", {}, "Use x10 for a quick batch, or Auto Spin to keep rolling until something big interrupts it.")
+        : t("fortune.helperLocked", {}, "Collect more than 10 spins to unlock auto spin.");
 
   return (
     <div style={{ display: "grid", gap: 18 }}>
@@ -224,7 +279,7 @@ export default function DinoFeeder({
               boxShadow: "0 24px 50px rgba(0,0,0,0.3)",
               position: "relative",
               transform: `rotate(${rotation}deg)`,
-              transition: spinning ? "transform 4.2s cubic-bezier(0.12, 0.88, 0.18, 1)" : "transform 0.2s ease-out"
+              transition: spinning ? `transform ${Math.max(0.6, spinDurationMs / 1000)}s cubic-bezier(0.12, 0.88, 0.18, 1)` : "transform 0.2s ease-out"
             }}
           >
             {segments.map((segment, index) => {
@@ -261,33 +316,67 @@ export default function DinoFeeder({
           </div>
         </div>
 
-        <button
-          onClick={handleButtonClick}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          disabled={spinning || (!canSpin && !autoSpin)}
-          style={{
-            padding: "12px 18px",
-            borderRadius: 14,
-            border: "none",
-            background: autoSpin
-              ? "linear-gradient(180deg,#f59e0b,#fb7185)"
-              : canSpin
-                ? "linear-gradient(180deg,#22d3ee,#06b6d4)"
-                : "#334155",
-            color: autoSpin ? "#2b0a10" : (canSpin ? "#04232b" : "#94a3b8"),
-            fontWeight: 900,
-            fontSize: 15,
-            cursor: (canSpin || autoSpin) ? "pointer" : "not-allowed",
-            boxShadow: canSpin || autoSpin ? "0 14px 24px rgba(6,182,212,0.24)" : "none"
-          }}
-        >
-          {buttonLabel}
-        </button>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.3fr) repeat(2, minmax(0, 0.85fr))", gap: 10, width: "min(92vw, 520px)" }}>
+          <button
+            onClick={handleButtonClick}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            disabled={spinning || isBusy || displayedSpins <= 0 || autoSpin || batchSpinsRemaining > 0}
+            style={{
+              padding: "12px 18px",
+              borderRadius: 14,
+              border: "none",
+              background: canSpin ? "linear-gradient(180deg,#22d3ee,#06b6d4)" : "#334155",
+              color: canSpin ? "#04232b" : "#94a3b8",
+              fontWeight: 900,
+              fontSize: 15,
+              cursor: canSpin ? "pointer" : "not-allowed",
+              boxShadow: canSpin ? "0 14px 24px rgba(6,182,212,0.24)" : "none"
+            }}
+          >
+            {buttonLabel}
+          </button>
+          <button
+            onClick={handleSpinTen}
+            disabled={spinning || isBusy || displayedSpins < 10 || autoSpin || batchSpinsRemaining > 0}
+            style={{
+              padding: "12px 14px",
+              borderRadius: 14,
+              border: "none",
+              background: batchSpinsRemaining > 0 ? "linear-gradient(180deg,#f59e0b,#fb7185)" : (displayedSpins >= 10 ? "linear-gradient(180deg,#fcd34d,#f59e0b)" : "#334155"),
+              color: displayedSpins >= 10 ? "#2b1704" : "#94a3b8",
+              fontWeight: 900,
+              fontSize: 15,
+              cursor: displayedSpins >= 10 ? "pointer" : "not-allowed",
+              boxShadow: displayedSpins >= 10 ? "0 14px 24px rgba(245,158,11,0.24)" : "none"
+            }}
+          >
+            {batchSpinsRemaining > 0
+              ? t("fortune.buttonTenSpinning", { count: batchSpinsRemaining }, `x10 (${batchSpinsRemaining})`)
+              : t("fortune.buttonSpinTen", {}, "Spin x10")}
+          </button>
+          <button
+            onClick={handleAutoToggle}
+            disabled={isBusy || batchSpinsRemaining > 0 || (!autoSpin && (spinning || displayedSpins <= 10))}
+            style={{
+              padding: "12px 14px",
+              borderRadius: 14,
+              border: "none",
+              background: autoSpin ? "linear-gradient(180deg,#f59e0b,#fb7185)" : (displayedSpins > 10 ? "linear-gradient(180deg,#818cf8,#38bdf8)" : "#334155"),
+              color: autoSpin ? "#2b0a10" : (displayedSpins > 10 ? "#e0f2fe" : "#94a3b8"),
+              fontWeight: 900,
+              fontSize: 15,
+              cursor: autoSpin || displayedSpins > 10 ? "pointer" : "not-allowed",
+              boxShadow: autoSpin || displayedSpins > 10 ? "0 14px 24px rgba(99,102,241,0.24)" : "none"
+            }}
+          >
+            {autoSpin ? t("fortune.buttonAutoOff", {}, "Stop auto") : t("fortune.buttonAutoOn", {}, "Auto spin")}
+          </button>
+        </div>
 
-        <div style={{ color: autoSpin ? "#fcd34d" : "#94a3b8", fontSize: 12, textAlign: "center" }}>
+        <div style={{ color: autoSpin || batchSpinsRemaining > 0 ? "#fcd34d" : "#94a3b8", fontSize: 12, textAlign: "center" }}>
           {helperLabel}
         </div>
       </div>

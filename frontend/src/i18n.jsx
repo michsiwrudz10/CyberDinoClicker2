@@ -1696,6 +1696,25 @@ function repairMojibake(value) {
   return best;
 }
 
+Object.assign(TRANSLATIONS.pl, {
+  "zoo.adultMeatFlow": "Dorosły przepływ mięsa",
+  "zoo.adultFernFlow": "Dorosły przepływ paproci",
+  "shop.defaultDinoBlurb": "Dorosłe osobniki zwykle dochodzą do około {adult}/s.",
+  "fortune.buttonSpinTen": "Koło x10",
+  "fortune.buttonTenSpinning": "x10 ({count})",
+  "fortune.buttonAutoOn": "Auto spin",
+  "fortune.buttonAutoOff": "Stop auto",
+  "fortune.needTenSpins": "Potrzebujesz co najmniej 10 spinów, żeby użyć x10.",
+  "fortune.needMoreThanTen": "Zbierz więcej niż 10 spinów, żeby odblokować auto spin.",
+  "fortune.helperButtons": "Użyj x10 do szybkiej serii albo Auto Spin, żeby kręcić bez przerwy aż coś dużego go zatrzyma.",
+  "fortune.helperBatch": "Szybka seria x10 trwa. Zostało jeszcze {count} spinów.",
+  "zoo.breedingEggQueue": "Jajka z rozmnażania",
+  "zoo.breedingEggsHelp": "Każde jajko stworzone tutaj rośnie też w tej zakładce, więc od razu widzisz postęp i czas do wyklucia.",
+  "zoo.noBreedingEggsYet": "Nie masz jeszcze jajek z rozmnażania. Stwórz jedno powyżej, a pojawi się tutaj od razu.",
+  "zoo.readyToHatchHere": "Gotowe do wyklucia",
+  "zoo.opensInLab": "To jajko możesz też dalej modyfikować w Laboratorium, jeśli chcesz dodać geny."
+});
+
 const NORMALIZED_LANGUAGE_OPTIONS = LANGUAGE_OPTIONS.map((language) => ({
   ...language,
   label: repairMojibake(language.label)

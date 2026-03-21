@@ -19,6 +19,14 @@ function translateRewardSegment(t, amount, unit) {
   return `${amount} ${translateUnit(t, unit, amount)}`;
 }
 
+function formatRateForBlurb(value = 0) {
+  const number = Number(value) || 0;
+  if (number >= 100) return Math.round(number).toString();
+  if (number >= 10) return number.toFixed(1).replace(/\.0$/, "");
+  if (number >= 1) return number.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+  return number > 0 ? number.toFixed(3).replace(/0+$/, "").replace(/\.$/, "") : "0";
+}
+
 export function formatRewardList(t, reward = {}, options = {}) {
   const separator = options.separator || ", ";
   const parts = [];
@@ -79,7 +87,8 @@ export function getLocalizedOutputFallback(t, adult, resourceType = "meat") {
   const unit = resourceType === "ferns"
     ? t("resource.ferns", {}, "Ferns").toLowerCase()
     : t("resource.meat", {}, "Meat").toLowerCase();
-  return t("shop.defaultDinoBlurb", { adult, resource: unit }, `Adult dinosaurs usually settle near ${adult}/s.`);
+  const roundedAdult = formatRateForBlurb(adult);
+  return t("shop.defaultDinoBlurb", { adult: roundedAdult, resource: unit }, `Adult dinosaurs usually settle near ${roundedAdult}/s.`);
 }
 export function localizePromotion(t, promotion) {
   if (!promotion) return promotion;
@@ -95,11 +104,12 @@ export function localizeDino(t, dino) {
   if (!dino) return dino;
   const resourceType = dino?.productionResource === "ferns" ? "ferns" : "meat";
   const genericBlurb = getLocalizedOutputFallback(t, dino.meatPerSec || 0, resourceType);
-  const fallbackBlurb = genericBlurb !== `Adult dinosaurs usually settle near ${dino.meatPerSec || 0}/s.` ? genericBlurb : (dino.blurb || genericBlurb);
+  const roundedAdult = formatRateForBlurb(dino.meatPerSec || 0);
+  const fallbackBlurb = genericBlurb !== `Adult dinosaurs usually settle near ${roundedAdult}/s.` ? genericBlurb : (dino.blurb || genericBlurb);
   return {
     ...dino,
     name: localizeDynamicContent(t, "content.dino", dino.id, "name", dino.name),
-    blurb: localizeDynamicContent(t, "content.dino", dino.id, "blurb", fallbackBlurb, { adult: dino.meatPerSec || 0, resource: resourceType })
+    blurb: localizeDynamicContent(t, "content.dino", dino.id, "blurb", fallbackBlurb, { adult: roundedAdult, resource: resourceType })
   };
 }
 
@@ -126,11 +136,12 @@ function localizeCollectionEntry(t, entry) {
   const adultMeatPerSec = entry.adultMeatPerSec || 0;
   const resourceType = entry?.resourceType === "ferns" || entry?.productionResource === "ferns" ? "ferns" : "meat";
   const genericBlurb = getLocalizedOutputFallback(t, adultMeatPerSec, resourceType);
-  const fallbackBlurb = genericBlurb !== `Adult dinosaurs usually settle near ${adultMeatPerSec}/s.` ? genericBlurb : (entry.blurb || genericBlurb);
+  const roundedAdult = formatRateForBlurb(adultMeatPerSec);
+  const fallbackBlurb = genericBlurb !== `Adult dinosaurs usually settle near ${roundedAdult}/s.` ? genericBlurb : (entry.blurb || genericBlurb);
   return {
     ...entry,
     name: localizeDynamicContent(t, "content.dino", entry.id || entry.speciesId, "name", entry.name),
-    blurb: localizeDynamicContent(t, "content.dino", entry.id || entry.speciesId, "blurb", fallbackBlurb, { adult: adultMeatPerSec, resource: resourceType }),
+    blurb: localizeDynamicContent(t, "content.dino", entry.id || entry.speciesId, "blurb", fallbackBlurb, { adult: roundedAdult, resource: resourceType }),
     stage: localizeStage(t, entry.stage)
   };
 }

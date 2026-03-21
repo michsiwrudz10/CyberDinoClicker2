@@ -9,6 +9,19 @@ function fallbackPrice(product) {
   return `${product.priceAmount || product.starsPrice || 0} ${product.currency || ""}`.trim();
 }
 
+const rewardBurstParticles = [
+  { left: "8%", top: "16%", size: 16, delay: "0s", duration: "2.6s" },
+  { left: "18%", top: "8%", size: 12, delay: "0.15s", duration: "2.3s" },
+  { left: "29%", top: "18%", size: 10, delay: "0.25s", duration: "2.8s" },
+  { left: "74%", top: "12%", size: 14, delay: "0.1s", duration: "2.5s" },
+  { left: "84%", top: "18%", size: 18, delay: "0.35s", duration: "2.9s" },
+  { left: "91%", top: "8%", size: 12, delay: "0.2s", duration: "2.2s" },
+  { left: "10%", top: "72%", size: 14, delay: "0.4s", duration: "2.4s" },
+  { left: "24%", top: "82%", size: 12, delay: "0.55s", duration: "2.7s" },
+  { left: "76%", top: "78%", size: 11, delay: "0.5s", duration: "2.35s" },
+  { left: "90%", top: "70%", size: 15, delay: "0.65s", duration: "2.75s" }
+];
+
 export default function StoreProductModal({
   open = false,
   product = null,
@@ -33,6 +46,7 @@ export default function StoreProductModal({
   const resolvedDescription = description || product.description || "";
   const resolvedReward = rewardLabel || t("premium.serverReward", {}, "Server reward");
   const resolvedPrice = priceLabel || fallbackPrice(product);
+  const showRewardBurst = product?.id === "purchase_milestone_reward";
 
   return (
     <div
@@ -49,6 +63,8 @@ export default function StoreProductModal({
       <div
         style={{
           width: "min(92vw, 560px)",
+          position: "relative",
+          overflow: "hidden",
           borderRadius: 26,
           padding: 20,
           background: "linear-gradient(180deg, rgba(8,18,41,0.98), rgba(15,23,42,0.98))",
@@ -59,6 +75,34 @@ export default function StoreProductModal({
           gap: 16
         }}
       >
+        {showRewardBurst ? (
+          <>
+            <style>
+              {`@keyframes reward-burst-float {
+                0% { transform: translateY(0) scale(0.8); opacity: 0; }
+                18% { opacity: 1; }
+                100% { transform: translateY(-42px) scale(1.12); opacity: 0; }
+              }`}
+            </style>
+            {rewardBurstParticles.map((particle, index) => (
+              <div
+                key={`${particle.left}-${index}`}
+                style={{
+                  position: "absolute",
+                  left: particle.left,
+                  top: particle.top,
+                  width: particle.size,
+                  height: particle.size,
+                  borderRadius: "999px",
+                  background: "radial-gradient(circle at 30% 30%, rgba(255,251,235,0.98), rgba(251,191,36,0.94) 45%, rgba(217,119,6,0.86) 100%)",
+                  boxShadow: "0 0 18px rgba(251,191,36,0.38)",
+                  animation: `reward-burst-float ${particle.duration} ease-out ${particle.delay} infinite`,
+                  pointerEvents: "none"
+                }}
+              />
+            ))}
+          </>
+        ) : null}
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}>
           <div>
             <div style={{ display: "inline-flex", padding: "5px 10px", borderRadius: 999, background: "rgba(96,165,250,0.16)", color: "#bfdbfe", fontSize: 12, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase" }}>
@@ -67,8 +111,21 @@ export default function StoreProductModal({
             <div style={{ marginTop: 10, fontSize: 28, fontWeight: 900 }}>{resolvedTitle}</div>
             <div style={{ marginTop: 8, color: "#9ca3af", lineHeight: 1.5 }}>{resolvedDescription}</div>
           </div>
-          <button onClick={onClose} style={{ border: "none", background: "transparent", color: "#9ca3af", fontSize: 18, cursor: "pointer" }}>
-            x
+          <button
+            onClick={onClose}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 14,
+              border: "1px solid rgba(148,163,184,0.2)",
+              background: "rgba(15,23,42,0.42)",
+              color: "#e2e8f0",
+              fontSize: 28,
+              lineHeight: 1,
+              cursor: "pointer"
+            }}
+          >
+            ×
           </button>
         </div>
 
