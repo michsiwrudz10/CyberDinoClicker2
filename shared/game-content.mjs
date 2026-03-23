@@ -216,14 +216,14 @@ export const FERN_DINOS = [
   }
 ];
 export const ZOO_PROMOTIONS = [
-  { id: "promo_tv_spotlight", name: "TV Spotlight", baseFernsCost: 2, incomeMultiplier: 1.08, channel: "Television", description: "Run a polished local TV campaign for your zoo." },
-  { id: "promo_newspaper_feature", name: "Newspaper Feature", baseFernsCost: 3, incomeMultiplier: 1.1, channel: "Newspaper", description: "Buy a big newspaper feature with your strongest dinos on the cover." },
-  { id: "promo_billboard_blitz", name: "Billboard Blitz", baseFernsCost: 4, incomeMultiplier: 1.15, channel: "Billboards", description: "Cover the city with giant dinosaur billboards." },
-  { id: "promo_flyer_crew", name: "Flyer Crew", baseFernsCost: 5, incomeMultiplier: 1.12, channel: "Flyers", description: "Send promo teams to hand out flyers near the zoo." },
-  { id: "promo_social_storm", name: "Social Storm", baseFernsCost: 7, incomeMultiplier: 1.24, channel: "Socials", description: "Push your best dinos across short-form social feeds." },
-  { id: "promo_brand_ambassadors", name: "Brand Ambassadors", baseFernsCost: 9, incomeMultiplier: 1.28, channel: "Ambassadors", description: "Hire ambassadors to talk about your zoo in the city." },
-  { id: "promo_citywide_tour", name: "Citywide Zoo Tour", baseFernsCost: 11, incomeMultiplier: 1.35, channel: "PR", description: "Launch a citywide campaign with hosts, press and promo vans." },
-  { id: "promo_pigeon_drop", name: "Pigeon Flyer Drop", baseFernsCost: 13, incomeMultiplier: 1.4, channel: "Pigeons", description: "Drop flyers over the whole city with trained pigeons." }
+  { id: "promo_tv_spotlight", name: "TV Spotlight", baseFernsCost: 6, incomeMultiplier: 1.08, channel: "Television", description: "Run a polished local TV campaign for your zoo." },
+  { id: "promo_newspaper_feature", name: "Newspaper Feature", baseFernsCost: 9, incomeMultiplier: 1.1, channel: "Newspaper", description: "Buy a big newspaper feature with your strongest dinos on the cover." },
+  { id: "promo_billboard_blitz", name: "Billboard Blitz", baseFernsCost: 14, incomeMultiplier: 1.15, channel: "Billboards", description: "Cover the city with giant dinosaur billboards." },
+  { id: "promo_flyer_crew", name: "Flyer Crew", baseFernsCost: 18, incomeMultiplier: 1.12, channel: "Flyers", description: "Send promo teams to hand out flyers near the zoo." },
+  { id: "promo_social_storm", name: "Social Storm", baseFernsCost: 26, incomeMultiplier: 1.24, channel: "Socials", description: "Push your best dinos across short-form social feeds." },
+  { id: "promo_brand_ambassadors", name: "Brand Ambassadors", baseFernsCost: 34, incomeMultiplier: 1.28, channel: "Ambassadors", description: "Hire ambassadors to talk about your zoo in the city." },
+  { id: "promo_citywide_tour", name: "Citywide Zoo Tour", baseFernsCost: 42, incomeMultiplier: 1.35, channel: "PR", description: "Launch a citywide campaign with hosts, press and promo vans." },
+  { id: "promo_pigeon_drop", name: "Pigeon Flyer Drop", baseFernsCost: 54, incomeMultiplier: 1.4, channel: "Pigeons", description: "Drop flyers over the whole city with trained pigeons." }
 ];
 
 export const MARKET_ROUTE_DEFS = [

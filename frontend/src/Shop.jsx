@@ -371,7 +371,11 @@ function UniqueDinoCard({ dino, count, onOpen, compact = false, t }) {
 function PromotionCard({ promotion, index, count, onOpen, compact = false, t }) {
   const pal = paletteForPromotion(index);
   const cost = getPromotionPrice(promotion.baseFernsCost, count);
-  const totalMultiplier = Math.pow(promotion.incomeMultiplier || 1, count);
+  const currentMultiplier = Math.pow(promotion.incomeMultiplier || 1, count);
+  const nextMultiplier = Math.pow(promotion.incomeMultiplier || 1, count + 1);
+  const boostLabel = count > 0
+    ? `${t("shop.boost", {}, "Boost")} x${currentMultiplier.toFixed(2)} -> x${nextMultiplier.toFixed(2)}`
+    : `${t("shop.boost", {}, "Boost")} x${nextMultiplier.toFixed(2)}`;
   return (
     <DinoCard
       title={promotion.name}
@@ -382,7 +386,7 @@ function PromotionCard({ promotion, index, count, onOpen, compact = false, t }) 
         content: <div style={{ fontSize: 52, fontWeight: 900, color: pal.accent }}>{promotion.channel.slice(0, 2).toUpperCase()}</div>
       }}
       accent={pal.accent}
-      footer={<FooterPills compact={compact} items={[{ label: `${t("shop.boost", {}, "Boost")} x${totalMultiplier.toFixed(2)}`, tone: "#fde68a" }, { label: `${t("common.price", {}, "Price")}: ${cost} ${t("units.ferns.other", {}, "ferns")}`, tone: "#fbcfe8" }]} />}
+      footer={<FooterPills compact={compact} items={[{ label: boostLabel, tone: "#fde68a" }, { label: `${t("common.price", {}, "Price")}: ${cost} ${t("units.ferns.other", {}, "ferns")}`, tone: "#fbcfe8" }]} />}
       onOpen={() => onOpen(promotion)}
       compact={compact}
     />
